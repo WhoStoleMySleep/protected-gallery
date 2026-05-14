@@ -15,6 +15,8 @@ export interface VaultFile {
   trashedAt?: number
 }
 
+export type VaultMode = 'real' | 'safe'
+
 export type MainTab = 'daily' | 'import' | 'settings'
 export type ViewerReturn = MainTab | 'allMedia' | 'trash' | 'archive'
 
@@ -26,6 +28,7 @@ export type AppScreen =
   | { name: 'import' }
   | { name: 'settings' }
   | { name: 'changePin' }
+  | { name: 'safeModeSetup' }
   | { name: 'allMedia' }
   | { name: 'trash' }
   | { name: 'archive' }

@@ -18,9 +18,11 @@ interface Props {
   onAllMedia: () => void
   onTrash: () => void
   onArchive: () => void
+  onSafeModeSetup: () => void
+  vaultMode: 'real' | 'safe'
 }
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode }) => {
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
 
@@ -159,14 +161,26 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>БЕЗОПАСНОСТЬ</Text>
-          <TouchableOpacity style={styles.row} onPress={onChangePin}>
-            <Text style={styles.rowIcon}>🔑</Text>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Сменить PIN-код</Text>
-              <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+          {vaultMode === 'real' && (
+            <TouchableOpacity style={styles.row} onPress={onChangePin}>
+              <Text style={styles.rowIcon}>🔑</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>Сменить PIN-код</Text>
+                <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          )}
+          {vaultMode === 'real' && (
+            <TouchableOpacity style={styles.row} onPress={onSafeModeSetup}>
+              <Text style={styles.rowIcon}>🎭</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>Безопасный режим</Text>
+                <Text style={styles.rowDesc}>Отдельное хранилище с другим PIN-кодом</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onLock}>
             <Text style={styles.rowIcon}>🔒</Text>
             <View style={styles.rowBody}>

@@ -3,6 +3,7 @@ import { randomBytes, pbkdf2 } from 'react-native-quick-crypto'
 import { bytesToBase64, base64ToBytes } from '../utils/encoding'
 
 const KEY_STORE_KEY = 'vault_master_key_v1'
+const SAFE_KEY_STORE_KEY = 'vault_safe_master_key_v1'
 
 export const generateAndStoreMasterKey = async (): Promise<Uint8Array> => {
   const keyBytes = new Uint8Array(randomBytes(32) as unknown as Uint8Array)
@@ -17,12 +18,32 @@ export const loadMasterKey = async (): Promise<Uint8Array | null> => {
 }
 
 export const masterKeyExists = async (): Promise<boolean> => {
-  const stored = await SecureStore.getItemAsync(KEY_STORE_KEY)
-  return stored !== null
+  return (await SecureStore.getItemAsync(KEY_STORE_KEY)) !== null
 }
 
 export const deleteMasterKey = async (): Promise<void> => {
   await SecureStore.deleteItemAsync(KEY_STORE_KEY)
+}
+
+// Safe mode key
+export const generateAndStoreSafeKey = async (): Promise<Uint8Array> => {
+  const keyBytes = new Uint8Array(randomBytes(32) as unknown as Uint8Array)
+  await SecureStore.setItemAsync(SAFE_KEY_STORE_KEY, bytesToBase64(keyBytes))
+  return keyBytes
+}
+
+export const loadSafeKey = async (): Promise<Uint8Array | null> => {
+  const stored = await SecureStore.getItemAsync(SAFE_KEY_STORE_KEY)
+  if (!stored) return null
+  return base64ToBytes(stored)
+}
+
+export const safeKeyExists = async (): Promise<boolean> => {
+  return (await SecureStore.getItemAsync(SAFE_KEY_STORE_KEY)) !== null
+}
+
+export const deleteSafeKey = async (): Promise<void> => {
+  await SecureStore.deleteItemAsync(SAFE_KEY_STORE_KEY)
 }
 
 export const deriveSubKey = (masterKey: Uint8Array, purpose: string): Promise<Uint8Array> =>

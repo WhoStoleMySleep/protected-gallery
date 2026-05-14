@@ -1,0 +1,182 @@
+import React, { useState, useEffect } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { PinPad } from '../components/PinPad'
+import { setupSafePin, safePinExists, deleteSafePin } from '../crypto/pin'
+import { generateAndStoreSafeKey, deleteSafeKey } from '../crypto/keys'
+import { COLORS } from '../theme'
+
+interface Props {
+  onComplete: () => void
+  onCancel: () => void
+}
+
+type Step = 'status' | 'newPin' | 'confirmPin'
+
+export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
+  const [step, setStep] = useState<Step>('status')
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [newPin, setNewPin] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    safePinExists().then(exists => {
+      setIsConfigured(exists)
+      setLoading(false)
+    })
+  }, [])
+
+  const handleNewPin = (pin: string) => {
+    setNewPin(pin)
+    setStep('confirmPin')
+  }
+
+  const handleConfirm = async (pin: string) => {
+    if (pin !== newPin) {
+      setNewPin('')
+      setStep('newPin')
+      return
+    }
+    setSaving(true)
+    try {
+      await setupSafePin(pin)
+      await generateAndStoreSafeKey()
+      onComplete()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const disable = () => {
+    Alert.alert(
+      'Отключить безопасный режим?',
+      'Все файлы в безопасном хранилище будут безвозвратно удалены.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Отключить',
+          style: 'destructive',
+          onPress: async () => {
+            setSaving(true)
+            try {
+              await deleteSafePin()
+              await deleteSafeKey()
+              onComplete()
+            } finally {
+              setSaving(false)
+            }
+          },
+        },
+      ],
+    )
+  }
+
+  if (loading || saving) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={COLORS.accent} size="large" />
+      </View>
+    )
+  }
+
+  if (step === 'newPin') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setStep('status')}>
+            <Text style={styles.cancel}>Отмена</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Безопасный режим</Text>
+          <View style={{ width: 64 }} />
+        </View>
+        <PinPad title="Новый PIN" onComplete={handleNewPin} />
+      </SafeAreaView>
+    )
+  }
+
+  if (step === 'confirmPin') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => { setNewPin(''); setStep('newPin') }}>
+            <Text style={styles.cancel}>Назад</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Безопасный режим</Text>
+          <View style={{ width: 64 }} />
+        </View>
+        <PinPad title="Повторите PIN" onComplete={handleConfirm} />
+      </SafeAreaView>
+    )
+  }
+
+  // step === 'status'
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel}>
+          <Text style={styles.cancel}>Отмена</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Безопасный режим</Text>
+        <View style={{ width: 64 }} />
+      </View>
+
+      <View style={styles.body}>
+        <Text style={styles.icon}>🎭</Text>
+
+        {!isConfigured ? (
+          <>
+            <Text style={styles.heading}>Не настроен</Text>
+            <Text style={styles.desc}>
+              Создайте отдельное хранилище с независимым PIN-кодом. При входе с этим кодом откроется безопасное хранилище — для отвлечения внимания.{'\n\n'}
+              Смена PIN-кода и настройки безопасного режима в нём недоступны.
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('newPin')}>
+              <Text style={styles.primaryBtnTxt}>Настроить</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.heading}>Активен</Text>
+            <Text style={styles.desc}>
+              Безопасное хранилище настроено. При входе с PIN-кодом безопасного режима откроется независимое хранилище.
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('newPin')}>
+              <Text style={styles.primaryBtnTxt}>Сменить PIN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dangerBtn} onPress={disable}>
+              <Text style={styles.dangerBtnTxt}>Отключить</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  cancel: { color: COLORS.accent, fontSize: 16 },
+  title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  icon: { fontSize: 56, marginBottom: 16 },
+  heading: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+  desc: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  primaryBtn: {
+    backgroundColor: COLORS.accent, paddingHorizontal: 40, paddingVertical: 14,
+    borderRadius: 12, marginBottom: 12, width: '100%', alignItems: 'center',
+  },
+  primaryBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  dangerBtn: {
+    backgroundColor: COLORS.card, paddingHorizontal: 40, paddingVertical: 14,
+    borderRadius: 12, width: '100%', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.danger,
+  },
+  dangerBtnTxt: { color: COLORS.danger, fontSize: 16, fontWeight: '600' },
+})

@@ -4,9 +4,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
 
 import { pinExists } from './src/crypto/pin'
-import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey } from './src/crypto/keys'
+import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore } from './src/storage/metadata'
-import { ensureVaultDir, purgeExpiredTrash } from './src/storage/vault'
+import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash } from './src/storage/vault'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
 import { PinEntryScreen } from './src/screens/PinEntryScreen'
@@ -18,14 +18,16 @@ import { ChangePinScreen } from './src/screens/ChangePinScreen'
 import { AllMediaScreen } from './src/screens/AllMediaScreen'
 import { TrashScreen } from './src/screens/TrashScreen'
 import { ArchiveScreen } from './src/screens/ArchiveScreen'
+import { SafeModeSetupScreen } from './src/screens/SafeModeSetupScreen'
 import { TabBar } from './src/components/TabBar'
 
-import type { AppScreen, MainTab, ViewerReturn } from './src/types'
+import type { AppScreen, MainTab, ViewerReturn, VaultMode } from './src/types'
 import { COLORS } from './src/theme'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>({ name: 'loading' })
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null)
+  const [vaultMode, setVaultMode] = useState<VaultMode>('real')
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -82,16 +84,28 @@ export default function App() {
     }
   }
 
-  const unlock = async () => {
+  const unlock = async (mode: VaultMode = 'real') => {
     try {
-      let masterKey = await loadMasterKey()
-      if (!masterKey) masterKey = await generateAndStoreMasterKey()
-      const metaKey = await deriveSubKey(masterKey, 'metadata')
-      initMetadataStore(metaKey)
-      ensureVaultDir()
-      setFileKey(masterKey)
+      if (mode === 'safe') {
+        let masterKey = await loadSafeKey()
+        if (!masterKey) masterKey = await generateAndStoreSafeKey()
+        const metaKey = await deriveSubKey(masterKey, 'metadata')
+        initMetadataStore(metaKey, 'vault_safe')
+        initVaultNamespace('vault_safe')
+        ensureVaultDir()
+        setFileKey(masterKey)
+      } else {
+        let masterKey = await loadMasterKey()
+        if (!masterKey) masterKey = await generateAndStoreMasterKey()
+        const metaKey = await deriveSubKey(masterKey, 'metadata')
+        initMetadataStore(metaKey, 'vault')
+        initVaultNamespace('vault')
+        ensureVaultDir()
+        setFileKey(masterKey)
+        purgeExpiredTrash().catch(() => {})
+      }
+      setVaultMode(mode)
       setScreen({ name: 'daily' })
-      purgeExpiredTrash().catch(() => {})
     } catch (e: any) {
       setInitError(e?.message ?? String(e))
     }
@@ -99,6 +113,7 @@ export default function App() {
 
   const lock = () => {
     setFileKey(null)
+    setVaultMode('real')
     setScreen({ name: 'pinEntry' })
   }
 
@@ -202,6 +217,17 @@ export default function App() {
     )
   }
 
+  if (screen.name === 'safeModeSetup') {
+    return (
+      <SafeAreaProvider>
+        <SafeModeSetupScreen
+          onComplete={() => setScreen({ name: 'settings' })}
+          onCancel={() => setScreen({ name: 'settings' })}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
   if (!fileKey) return <View style={styles.bg} />
 
   const tab = currentTab()
@@ -224,6 +250,8 @@ export default function App() {
             onAllMedia={() => setScreen({ name: 'allMedia' })}
             onTrash={() => setScreen({ name: 'trash' })}
             onArchive={() => setScreen({ name: 'archive' })}
+            onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
+            vaultMode={vaultMode}
           />
         </View>
         {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}

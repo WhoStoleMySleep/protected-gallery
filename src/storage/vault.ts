@@ -8,7 +8,10 @@ import type { VaultFile } from '../types'
 
 const yield_ = () => new Promise<void>(r => setTimeout(r, 0))
 
-const getVaultDir = () => new Directory(Paths.document, 'vault')
+let _vaultNs = 'vault'
+export const initVaultNamespace = (namespace: string) => { _vaultNs = namespace }
+
+const getVaultDir = () => new Directory(Paths.document, _vaultNs)
 const getCacheDir = () => new Directory(Paths.cache)
 
 export const ensureVaultDir = () => {

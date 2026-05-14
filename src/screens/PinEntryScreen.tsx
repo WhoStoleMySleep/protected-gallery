@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
 import { PinPad } from '../components/PinPad'
-import { verifyPin } from '../crypto/pin'
+import { checkPinMode } from '../crypto/pin'
+import type { VaultMode } from '../types'
 import { COLORS } from '../theme'
 
 interface Props {
-  onUnlock: () => void
+  onUnlock: (mode: VaultMode) => void
   biometricsAvailable: boolean
 }
 
@@ -19,14 +20,16 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
   const handlePin = async (pin: string) => {
     setLoading(true)
     try {
-      const ok = await verifyPin(pin)
-      if (ok) {
+      const mode = await checkPinMode(pin)
+      if (mode) {
         setError(null)
-        onUnlock()
+        onUnlock(mode)
       } else {
         const next = attempts + 1
         setAttempts(next)
-        setError(next >= 5 ? `Неверный PIN (${next} попыток). Попробуйте снова.` : 'Неверный PIN. Попробуйте снова.')
+        setError(next >= 5
+          ? `Неверный PIN (${next} попыток). Попробуйте снова.`
+          : 'Неверный PIN. Попробуйте снова.')
       }
     } finally {
       setLoading(false)
@@ -39,7 +42,7 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
       cancelLabel: 'Отмена',
       fallbackLabel: 'Ввести PIN',
     })
-    if (result.success) onUnlock()
+    if (result.success) onUnlock('real')
   }
 
   return (
