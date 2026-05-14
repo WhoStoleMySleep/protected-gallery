@@ -31,7 +31,11 @@ export const saveFile = async (file: VaultFile): Promise<void> => {
 export const getFile = async (id: string): Promise<VaultFile | null> => {
   const raw = await AsyncStorage.getItem(FILE_PREFIX + id)
   if (!raw) return null
-  return JSON.parse(dec(raw))
+  try {
+    return JSON.parse(dec(raw))
+  } catch {
+    return null
+  }
 }
 
 export const getAllFileIds = async (): Promise<string[]> => {
@@ -65,5 +69,9 @@ export const saveDailySelection = async (date: string, ids: string[]): Promise<v
 export const loadDailySelection = async (date: string): Promise<string[] | null> => {
   const raw = await AsyncStorage.getItem(DAILY_PREFIX + date)
   if (!raw) return null
-  return JSON.parse(dec(raw))
+  try {
+    return JSON.parse(dec(raw))
+  } catch {
+    return null
+  }
 }

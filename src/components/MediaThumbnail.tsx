@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native'
 import { Image } from 'expo-image'
 import type { VaultFile } from '../types'
 import { getMediaKind, formatDuration } from '../utils/media'
 import { decryptToTemp } from '../storage/vault'
+import { limit } from '../utils/concurrency'
 import { COLORS } from '../theme'
 
-// Кеш расшифрованных URI — живёт всё время работы приложения
 const uriCache = new Map<string, string>()
 
 interface Props {
@@ -26,17 +26,19 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress }
   useEffect(() => {
     if (cached || kind === 'unknown') return
     let cancelled = false
-    const load = async () => {
-      try {
-        const tempUri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType)
-        uriCache.set(file.id, tempUri)
-        if (!cancelled) { setUri(tempUri); setLoading(false) }
-      } catch {
-        if (!cancelled) { setFailed(true); setLoading(false) }
-      }
-    }
-    load()
-    return () => { cancelled = true }
+    const task = InteractionManager.runAfterInteractions(() => {
+      limit(async () => {
+        if (cancelled) return
+        try {
+          const tempUri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType)
+          uriCache.set(file.id, tempUri)
+          if (!cancelled) { setUri(tempUri); setLoading(false) }
+        } catch {
+          if (!cancelled) { setFailed(true); setLoading(false) }
+        }
+      })
+    })
+    return () => { cancelled = true; task.cancel() }
   }, [file.id])
 
   return (

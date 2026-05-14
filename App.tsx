@@ -25,6 +25,8 @@ export default function App() {
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const screenRef = useRef(screen)
+  useEffect(() => { screenRef.current = screen }, [screen])
 
   useEffect(() => {
     init()
@@ -33,7 +35,7 @@ export default function App() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', handleAppState)
     return () => sub.remove()
-  }, [screen])
+  }, [handleAppState])
 
   const handleAppState = useCallback((state: AppStateStatus) => {
     if (state === 'active') {
@@ -43,16 +45,17 @@ export default function App() {
       }
       return
     }
-    if (state === 'background' || state === 'inactive') {
-      if (screen.name === 'loading' || screen.name === 'pinSetup' || screen.name === 'pinEntry') return
-      // 5-секундная задержка — не блокируемся при открытии пикера/уведомлений
+    // Только 'background' — 'inactive' это переходное состояние (клавиатура, пикер, уведомления)
+    if (state === 'background') {
+      const cur = screenRef.current
+      if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry') return
       lockTimer.current = setTimeout(() => {
         setScreen({ name: 'pinEntry' })
         setFileKey(null)
         lockTimer.current = null
       }, 5000)
     }
-  }, [screen])
+  }, [])
 
   const init = async () => {
     try {
@@ -76,13 +79,17 @@ export default function App() {
   }
 
   const unlock = async () => {
-    let masterKey = await loadMasterKey()
-    if (!masterKey) masterKey = await generateAndStoreMasterKey()
-    const metaKey = await deriveSubKey(masterKey, 'metadata')
-    initMetadataStore(metaKey)
-    ensureVaultDir()
-    setFileKey(masterKey)
-    setScreen({ name: 'daily' })
+    try {
+      let masterKey = await loadMasterKey()
+      if (!masterKey) masterKey = await generateAndStoreMasterKey()
+      const metaKey = await deriveSubKey(masterKey, 'metadata')
+      initMetadataStore(metaKey)
+      ensureVaultDir()
+      setFileKey(masterKey)
+      setScreen({ name: 'daily' })
+    } catch (e: any) {
+      setInitError(e?.message ?? String(e))
+    }
   }
 
   const lock = () => {

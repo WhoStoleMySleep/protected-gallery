@@ -3,6 +3,8 @@ import { encryptBytes, decryptBytes } from '../crypto/cipher'
 import { bytesToBase64, base64ToBytes } from '../utils/encoding'
 import { getExtension } from '../utils/media'
 
+const yield_ = () => new Promise<void>(r => setTimeout(r, 0))
+
 const getVaultDir = () => new Directory(Paths.document, 'vault')
 const getCacheDir = () => new Directory(Paths.cache)
 
@@ -19,7 +21,9 @@ export const encryptAndSave = async (
   ensureVaultDir()
   const sourceFile = new File(sourceUri)
   const fileBytes = await sourceFile.bytes()
+  await yield_()
   const encrypted = encryptBytes(fileBytes, key)
+  await yield_()
   const encFile = new File(getVaultDir(), `${fileId}.enc`)
   encFile.write(bytesToBase64(encrypted), { encoding: 'base64' })
   return encFile.uri
@@ -32,8 +36,10 @@ export const decryptToTemp = async (
 ): Promise<string> => {
   const encFile = new File(encUri)
   const encB64 = await encFile.base64()
+  await yield_()
   const encBytes = base64ToBytes(encB64)
   const decrypted = decryptBytes(encBytes, key)
+  await yield_()
   const ext = getExtension(mimeType)
   const tempFile = new File(getCacheDir(), `tmp_${Date.now()}.${ext}`)
   tempFile.write(bytesToBase64(decrypted), { encoding: 'base64' })

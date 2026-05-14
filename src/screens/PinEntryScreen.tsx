@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
 import { PinPad } from '../components/PinPad'
@@ -26,11 +26,7 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
       } else {
         const next = attempts + 1
         setAttempts(next)
-        if (next >= 5) {
-          setError(`Неверный PIN (${next} попыток). Попробуйте снова.`)
-        } else {
-          setError('Неверный PIN. Попробуйте снова.')
-        }
+        setError(next >= 5 ? `Неверный PIN (${next} попыток). Попробуйте снова.` : 'Неверный PIN. Попробуйте снова.')
       }
     } finally {
       setLoading(false)
@@ -46,26 +42,20 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
     if (result.success) onUnlock()
   }
 
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
-      </View>
-    )
-  }
-
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.logo}>🔒</Text>
       <PinPad
         title="Введите PIN-код"
         onComplete={handlePin}
         error={error}
       />
+
       {biometricsAvailable && (
-        <TouchableOpacity style={styles.bioBtn} onPress={handleBiometrics}>
-          <Text style={styles.bioText}>Войти по биометрии</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bioBtn}
+          onPress={handleBiometrics}
+          activeOpacity={1}
+        />
       )}
     </SafeAreaView>
   )
@@ -73,11 +63,13 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  logo: { textAlign: 'center', fontSize: 48, marginTop: 32 },
   bioBtn: {
-    alignSelf: 'center', marginBottom: 32, paddingHorizontal: 24, paddingVertical: 12,
-    borderRadius: 10, borderWidth: 1, borderColor: COLORS.border,
+    position: 'absolute',
+    bottom: -16,
+    left: -16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'transparent',
   },
-  bioText: { color: COLORS.subtextLight, fontSize: 14 },
 })

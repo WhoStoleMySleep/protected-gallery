@@ -1,14 +1,11 @@
 import * as SecureStore from 'expo-secure-store'
-import { getRandomValues } from 'expo-crypto'
-import { pbkdf2Async } from '@noble/hashes/pbkdf2.js'
-import { sha256 } from '@noble/hashes/sha2.js'
+import { randomBytes, pbkdf2 } from 'react-native-quick-crypto'
 import { bytesToBase64, base64ToBytes } from '../utils/encoding'
 
 const KEY_STORE_KEY = 'vault_master_key_v1'
 
 export const generateAndStoreMasterKey = async (): Promise<Uint8Array> => {
-  const keyBytes = new Uint8Array(32)
-  getRandomValues(keyBytes)
+  const keyBytes = new Uint8Array(randomBytes(32) as unknown as Uint8Array)
   await SecureStore.setItemAsync(KEY_STORE_KEY, bytesToBase64(keyBytes))
   return keyBytes
 }
@@ -29,4 +26,9 @@ export const deleteMasterKey = async (): Promise<void> => {
 }
 
 export const deriveSubKey = (masterKey: Uint8Array, purpose: string): Promise<Uint8Array> =>
-  pbkdf2Async(sha256, masterKey, `vault:${purpose}:v1`, { c: 10000, dkLen: 32 })
+  new Promise((resolve, reject) =>
+    pbkdf2(Buffer.from(masterKey), `vault:${purpose}:v1`, 10000, 32, 'sha256', (err, key) => {
+      if (err || !key) return reject(err)
+      resolve(new Uint8Array(key as unknown as Uint8Array))
+    })
+  )

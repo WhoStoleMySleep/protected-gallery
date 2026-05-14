@@ -51,12 +51,7 @@ export const PinPad: React.FC<Props> = ({
       return
     }
     if (key === '') return
-    const next = pin + key
-    setPin(next)
-    if (next.length >= maxLength) {
-      onComplete(next)
-      setTimeout(() => setPin(''), 100)
-    }
+    setPin(p => p + key)
   }
 
   return (
@@ -65,12 +60,12 @@ export const PinPad: React.FC<Props> = ({
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
       <Animated.View style={[styles.dots, { transform: [{ translateX: shakeAnim }] }]}>
-        {Array.from({ length: maxLength }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, i < pin.length && styles.dotFilled]}
-          />
-        ))}
+        {pin.length === 0
+          ? <View style={styles.dotEmpty} />
+          : Array.from({ length: pin.length }).map((_, i) => (
+              <View key={i} style={styles.dotFilled} />
+            ))
+        }
       </Animated.View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -91,14 +86,19 @@ export const PinPad: React.FC<Props> = ({
         ))}
       </View>
 
-      {pin.length >= minLength && pin.length < maxLength && (
-        <TouchableOpacity style={styles.confirmBtn} onPress={() => {
+      <TouchableOpacity
+        style={[styles.confirmBtn, pin.length >= minLength ? styles.confirmActive : styles.confirmInactive]}
+        onPress={() => {
+          if (pin.length < minLength) return
           onComplete(pin)
           setTimeout(() => setPin(''), 100)
-        }}>
-          <Text style={styles.confirmText}>Подтвердить</Text>
-        </TouchableOpacity>
-      )}
+        }}
+        activeOpacity={pin.length >= minLength ? 0.7 : 1}
+      >
+        <Text style={[styles.confirmText, pin.length < minLength && styles.confirmTextInactive]}>
+          Подтвердить
+        </Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -107,9 +107,9 @@ const styles = StyleSheet.create({
   container: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 32 },
   title: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 8, textAlign: 'center' },
   subtitle: { fontSize: 14, color: COLORS.subtext, marginBottom: 32, textAlign: 'center' },
-  dots: { flexDirection: 'row', gap: 16, marginBottom: 16, marginTop: 16 },
-  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: COLORS.accent },
-  dotFilled: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, marginTop: 16, justifyContent: 'center', maxWidth: 280 },
+  dotEmpty: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: COLORS.subtext },
+  dotFilled: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.accent },
   error: { color: COLORS.danger, fontSize: 13, marginBottom: 8 },
   keypad: { flexDirection: 'row', flexWrap: 'wrap', width: 280, marginTop: 24 },
   key: {
@@ -120,8 +120,10 @@ const styles = StyleSheet.create({
   keyText: { fontSize: 24, fontWeight: '600', color: COLORS.text },
   keyBackspace: { fontSize: 20 },
   confirmBtn: {
-    marginTop: 16, paddingHorizontal: 32, paddingVertical: 14,
-    backgroundColor: COLORS.accent, borderRadius: 12,
+    marginTop: 16, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12,
   },
+  confirmActive: { backgroundColor: COLORS.accent },
+  confirmInactive: { backgroundColor: COLORS.card },
   confirmText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  confirmTextInactive: { color: COLORS.subtext },
 })

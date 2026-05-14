@@ -1,14 +1,18 @@
 import * as SecureStore from 'expo-secure-store'
-import { pbkdf2Async } from '@noble/hashes/pbkdf2.js'
-import { sha256 } from '@noble/hashes/sha2.js'
+import { pbkdf2 } from 'react-native-quick-crypto'
 import { bytesToHex, textToBytes } from '../utils/encoding'
 
 const PIN_STORE_KEY = 'vault_pin_hash_v1'
-const PIN_SALT = textToBytes('vault:pin:salt:v1')
+const PIN_SALT = 'vault:pin:salt:v1'
 
+// PBKDF2 через нативный C++ — неблокирующий async
 const hashPin = (pin: string): Promise<string> =>
-  pbkdf2Async(sha256, textToBytes(pin), PIN_SALT, { c: 100000, dkLen: 32 })
-    .then(bytesToHex)
+  new Promise((resolve, reject) =>
+    pbkdf2(pin, PIN_SALT, 100000, 32, 'sha256', (err, key) => {
+      if (err || !key) return reject(err)
+      resolve(bytesToHex(new Uint8Array(key as unknown as Uint8Array)))
+    })
+  )
 
 export const setupPin = async (pin: string): Promise<void> => {
   await SecureStore.setItemAsync(PIN_STORE_KEY, await hashPin(pin))

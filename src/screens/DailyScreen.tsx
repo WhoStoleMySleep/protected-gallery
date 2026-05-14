@@ -25,27 +25,32 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const today = getTodayKey()
 
   const loadDaily = useCallback(async () => {
-    const allIds = await getAllFileIds()
-    let selectedIds: string[]
+    setLoadError(null)
+    try {
+      const allIds = await getAllFileIds()
+      let selectedIds: string[]
 
-    if (allIds.length <= 25) {
-      // Пока файлов мало — всегда показываем все, кеш не нужен
-      selectedIds = allIds
-    } else {
-      const cached = await loadDailySelection(today)
-      if (cached) {
-        selectedIds = cached
+      if (allIds.length <= 25) {
+        selectedIds = allIds
       } else {
-        selectedIds = selectDaily(allIds)
-        await saveDailySelection(today, selectedIds)
+        const cached = await loadDailySelection(today)
+        if (cached) {
+          selectedIds = cached
+        } else {
+          selectedIds = selectDaily(allIds)
+          await saveDailySelection(today, selectedIds)
+        }
       }
-    }
 
-    const loaded = await Promise.all(selectedIds.map(id => getFile(id)))
-    setFiles(loaded.filter((f): f is VaultFile => f !== null))
+      const loaded = await Promise.all(selectedIds.map(id => getFile(id)))
+      setFiles(loaded.filter((f): f is VaultFile => f !== null))
+    } catch (e: any) {
+      setLoadError(e?.message ?? String(e))
+    }
   }, [today])
 
   useEffect(() => {
@@ -62,6 +67,16 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={COLORS.accent} size="large" />
+      </View>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
+          Ошибка загрузки:{'\n'}{loadError}
+        </Text>
       </View>
     )
   }

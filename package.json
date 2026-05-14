@@ -4,8 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
     "expo-crypto": "~15.0.9",
+    "expo-dev-client": "~6.0.21",
     "expo-file-system": "~19.0.22",
     "expo-image": "~3.0.11",
     "expo-image-picker": "~17.0.11",
@@ -24,6 +25,9 @@
     "expo-video": "~3.0.16",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-get-random-values": "^2.0.0",
+    "react-native-quick-base64": "^2.1.0",
+    "react-native-quick-crypto": "^1.1.3",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0"
   },
@@ -31,5 +35,6 @@
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "packageManager": "yarn@3.8.3+sha512.154080e749d50325f4df31bc341cd5ea2dc2c3ca9b2cfb8591c831ddefc8025084d9500223f61f4f73086f6d9faa746cbbf39bb988b41dfc042907687e8e7d7a"
 }

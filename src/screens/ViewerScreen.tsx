@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
-  FlatList, ActivityIndicator, StatusBar,
+  FlatList, ActivityIndicator, StatusBar, InteractionManager,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -57,7 +57,8 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   useEffect(() => {
     if (!visible) return
     let cancelled = false
-    const load = async () => {
+    const task = InteractionManager.runAfterInteractions(async () => {
+      if (cancelled) return
       setState(s => ({ ...s, loading: true, error: false }))
       try {
         const file = await getFile(fileId)
@@ -67,9 +68,8 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
       } catch {
         if (!cancelled) setState(s => ({ ...s, loading: false, error: true }))
       }
-    }
-    load()
-    return () => { cancelled = true }
+    })
+    return () => { cancelled = true; task.cancel() }
   }, [fileId, visible])
 
   if (state.loading) {
