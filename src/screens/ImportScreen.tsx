@@ -8,6 +8,7 @@ import { File } from 'expo-file-system'
 import { randomUUID } from 'expo-crypto'
 import { encryptAndSave } from '../storage/vault'
 import { saveFile, getAllFileIds } from '../storage/metadata'
+import { VaultStatsModal } from '../components/VaultStatsModal'
 import { formatFileSize } from '../utils/media'
 import { COLORS } from '../theme'
 import type { VaultFile } from '../types'
@@ -27,6 +28,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [totalInVault, setTotalInVault] = useState(0)
+  const [statsVisible, setStatsVisible] = useState(false)
 
   useEffect(() => {
     getAllFileIds().then(ids => setTotalInVault(ids.length))
@@ -121,10 +123,10 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           Файлы копируются и шифруются внутри сейфа. Оригиналы в галерее не изменяются.
         </Text>
 
-        <View style={styles.statsCard}>
+        <TouchableOpacity style={styles.statsCard} onPress={() => setStatsVisible(true)} activeOpacity={0.7}>
           <Text style={styles.statsLabel}>Файлов в сейфе</Text>
           <Text style={styles.statsValue}>{totalInVault}</Text>
-        </View>
+        </TouchableOpacity>
 
         {importing ? (
           <View style={styles.progressCard}>
@@ -161,6 +163,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           <Text style={styles.infoItem}>🔒  Без PIN данные недоступны</Text>
         </View>
       </ScrollView>
+      <VaultStatsModal visible={statsVisible} onClose={() => setStatsVisible(false)} />
     </SafeAreaView>
   )
 }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator,
+  Dimensions, ActivityIndicator, TouchableOpacity,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { getAllFileIds, loadDailySelection, saveDailySelection, getFile } from '../storage/metadata'
+import { getDailyLimit, DEFAULT_DAILY_LIMIT } from '../storage/settings'
 import { selectDaily, getTodayKey } from '../utils/randomizer'
 import { formatDate } from '../utils/media'
 import type { VaultFile } from '../types'
@@ -31,17 +32,17 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   const loadDaily = useCallback(async () => {
     setLoadError(null)
     try {
-      const allIds = await getAllFileIds()
+      const [allIds, dailyLimit] = await Promise.all([getAllFileIds(), getDailyLimit()])
       let selectedIds: string[]
 
-      if (allIds.length <= 25) {
+      if (allIds.length <= dailyLimit) {
         selectedIds = allIds
       } else {
         const cached = await loadDailySelection(today)
         if (cached) {
           selectedIds = cached
         } else {
-          selectedIds = selectDaily(allIds)
+          selectedIds = selectDaily(allIds, dailyLimit)
           await saveDailySelection(today, selectedIds)
         }
       }
@@ -90,7 +91,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
         <Text style={styles.title}>Сегодня</Text>
         <Text style={styles.date}>{dateLabel}</Text>
         <Text style={styles.count}>
-          {files.length === 0 ? 'Нет медиафайлов' : `${files.length} файлов`}
+          {files.length === 0 ? 'Сейф пуст' : `Файлов сегодня: ${files.length}`}
         </Text>
       </View>
 
@@ -119,6 +120,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
           )}
         />
       )}
+
     </SafeAreaView>
   )
 }

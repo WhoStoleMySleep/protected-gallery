@@ -1,11 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
-import { clearAllMeta, getAllFileIds } from '../storage/metadata'
+import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
+import { getDailyLimit, setDailyLimit } from '../storage/settings'
 import { COLORS } from '../theme'
+
+const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
 
 interface Props {
   onLock: () => void
@@ -14,6 +17,16 @@ interface Props {
 
 export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => {
   const [loading, setLoading] = useState(false)
+  const [dailyLimit, setDailyLimitState] = useState(25)
+
+  useEffect(() => {
+    getDailyLimit().then(setDailyLimitState)
+  }, [])
+
+  const changeDailyLimit = async (val: number) => {
+    setDailyLimitState(val)
+    await setDailyLimit(val)
+  }
 
   const confirmDeleteAll = () => {
     Alert.alert(
@@ -63,6 +76,29 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => 
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Настройки</Text>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ЕЖЕДНЕВНАЯ ПОДБОРКА</Text>
+          <View style={[styles.row, styles.rowNoBorder]}>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Файлов в день</Text>
+              <Text style={styles.rowDesc}>Сколько файлов показывать во вкладке «Сегодня»</Text>
+              <View style={styles.limitRow}>
+                {LIMIT_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.limitBtn, dailyLimit === opt && styles.limitBtnActive]}
+                    onPress={() => changeDailyLimit(opt)}
+                  >
+                    <Text style={[styles.limitTxt, dailyLimit === opt && styles.limitTxtActive]}>
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>БЕЗОПАСНОСТЬ</Text>
@@ -130,4 +166,12 @@ const styles = StyleSheet.create({
   rowDesc: { fontSize: 12, color: COLORS.subtext, lineHeight: 17 },
   aboutBtn: { alignItems: 'center', padding: 12 },
   aboutText: { color: COLORS.subtext, fontSize: 13 },
+  limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  limitBtn: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
+  },
+  limitBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  limitTxt: { color: COLORS.subtext, fontSize: 14, fontWeight: '600' },
+  limitTxtActive: { color: '#fff' },
 })
