@@ -14,9 +14,11 @@ const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
 interface Props {
   onLock: () => void
   onResetComplete: () => void
+  onChangePin: () => void
+  onAllMedia: () => void
 }
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia }) => {
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
 
@@ -126,8 +128,28 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => 
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>МЕДИАТЕКА</Text>
+          <TouchableOpacity style={styles.row} onPress={onAllMedia}>
+            <Text style={styles.rowIcon}>🗂</Text>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Все медиа</Text>
+              <Text style={styles.rowDesc}>Просмотреть все файлы в сейфе</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>БЕЗОПАСНОСТЬ</Text>
-          <TouchableOpacity style={styles.row} onPress={onLock}>
+          <TouchableOpacity style={styles.row} onPress={onChangePin}>
+            <Text style={styles.rowIcon}>🔑</Text>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Сменить PIN-код</Text>
+              <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onLock}>
             <Text style={styles.rowIcon}>🔒</Text>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Заблокировать сейф</Text>
@@ -206,4 +228,5 @@ const styles = StyleSheet.create({
   limitBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   limitTxt: { color: COLORS.subtext, fontSize: 14, fontWeight: '600' },
   limitTxtActive: { color: '#fff' },
+  chevron: { color: COLORS.subtext, fontSize: 20, fontWeight: '300' },
 })

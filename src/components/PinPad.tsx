@@ -24,7 +24,7 @@ export const PinPad: React.FC<Props> = ({
   title,
   subtitle,
   onComplete,
-  maxLength = 6,
+  maxLength = 16,
   minLength = 4,
   error,
 }) => {
@@ -51,7 +51,7 @@ export const PinPad: React.FC<Props> = ({
       return
     }
     if (key === '') return
-    setPin(p => p + key)
+    setPin(p => p.length < maxLength ? p + key : p)
   }
 
   return (

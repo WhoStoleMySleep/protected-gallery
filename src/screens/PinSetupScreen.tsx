@@ -52,14 +52,12 @@ export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
       {step === 'enter' ? (
         <PinPad
           title="Создайте PIN-код"
-          subtitle="4–6 цифр для защиты вашего сейфа"
           onComplete={handleFirst}
           error={error}
         />
       ) : (
         <PinPad
           title="Повторите PIN-код"
-          subtitle="Подтвердите введённый ранее PIN"
           onComplete={handleConfirm}
           error={error}
         />

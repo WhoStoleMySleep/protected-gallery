@@ -11,6 +11,9 @@ export interface VaultFile {
   duration?: number
 }
 
+export type MainTab = 'daily' | 'import' | 'settings'
+export type ViewerReturn = MainTab | 'allMedia'
+
 export type AppScreen =
   | { name: 'loading' }
   | { name: 'pinSetup' }
@@ -18,6 +21,6 @@ export type AppScreen =
   | { name: 'daily' }
   | { name: 'import' }
   | { name: 'settings' }
-  | { name: 'viewer'; fileIds: string[]; initialIndex: number; returnTo: MainTab }
-
-export type MainTab = 'daily' | 'import' | 'settings'
+  | { name: 'changePin' }
+  | { name: 'allMedia' }
+  | { name: 'viewer'; fileIds: string[]; initialIndex: number; returnTo: ViewerReturn }

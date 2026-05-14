@@ -14,9 +14,11 @@ import { DailyScreen } from './src/screens/DailyScreen'
 import { ImportScreen } from './src/screens/ImportScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { ViewerScreen } from './src/screens/ViewerScreen'
+import { ChangePinScreen } from './src/screens/ChangePinScreen'
+import { AllMediaScreen } from './src/screens/AllMediaScreen'
 import { TabBar } from './src/components/TabBar'
 
-import type { AppScreen, MainTab } from './src/types'
+import type { AppScreen, MainTab, ViewerReturn } from './src/types'
 import { COLORS } from './src/theme'
 
 export default function App() {
@@ -98,8 +100,8 @@ export default function App() {
   }
 
   const openViewer = (fileIds: string[], index: number) => {
-    const returnTo: MainTab =
-      screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings'
+    const returnTo: ViewerReturn =
+      screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings' || screen.name === 'allMedia'
         ? screen.name
         : 'daily'
     setScreen({ name: 'viewer', fileIds, initialIndex: index, returnTo })
@@ -112,7 +114,10 @@ export default function App() {
 
   const currentTab = (): MainTab => {
     if (screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings') return screen.name
-    if (screen.name === 'viewer') return screen.returnTo
+    if (screen.name === 'viewer') {
+      const r = screen.returnTo
+      return r === 'allMedia' ? 'settings' : r
+    }
     return 'daily'
   }
 
@@ -157,6 +162,29 @@ export default function App() {
     )
   }
 
+  if (screen.name === 'changePin') {
+    return (
+      <SafeAreaProvider>
+        <ChangePinScreen
+          onComplete={() => setScreen({ name: 'settings' })}
+          onCancel={() => setScreen({ name: 'settings' })}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
+  if (screen.name === 'allMedia' && fileKey) {
+    return (
+      <SafeAreaProvider>
+        <AllMediaScreen
+          fileKey={fileKey}
+          onOpenViewer={openViewer}
+          onBack={() => setScreen({ name: 'settings' })}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
   if (!fileKey) return <View style={styles.bg} />
 
   const tab = currentTab()
@@ -172,7 +200,12 @@ export default function App() {
           <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
         </View>
         <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
-          <SettingsScreen onLock={lock} onResetComplete={() => setScreen({ name: 'pinSetup' })} />
+          <SettingsScreen
+            onLock={lock}
+            onResetComplete={() => setScreen({ name: 'pinSetup' })}
+            onChangePin={() => setScreen({ name: 'changePin' })}
+            onAllMedia={() => setScreen({ name: 'allMedia' })}
+          />
         </View>
         <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />
       </View>
