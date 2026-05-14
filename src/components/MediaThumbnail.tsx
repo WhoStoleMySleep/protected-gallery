@@ -6,6 +6,9 @@ import { getMediaKind, formatDuration } from '../utils/media'
 import { decryptToTemp } from '../storage/vault'
 import { COLORS } from '../theme'
 
+// Кеш расшифрованных URI — живёт всё время работы приложения
+const uriCache = new Map<string, string>()
+
 interface Props {
   file: VaultFile
   fileKey: Uint8Array
@@ -14,25 +17,25 @@ interface Props {
 }
 
 export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress }) => {
-  const [uri, setUri] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const cached = uriCache.get(file.id)
+  const [uri, setUri] = useState<string | null>(cached ?? null)
+  const [loading, setLoading] = useState(!cached)
   const [failed, setFailed] = useState(false)
   const kind = getMediaKind(file.mimeType)
 
   useEffect(() => {
+    if (cached || kind === 'unknown') return
     let cancelled = false
     const load = async () => {
       try {
         const tempUri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType)
-        if (!cancelled) setUri(tempUri)
+        uriCache.set(file.id, tempUri)
+        if (!cancelled) { setUri(tempUri); setLoading(false) }
       } catch {
-        if (!cancelled) setFailed(true)
-      } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) { setFailed(true); setLoading(false) }
       }
     }
-    if (kind !== 'unknown') load()
-    else setLoading(false)
+    load()
     return () => { cancelled = true }
   }, [file.id])
 
@@ -60,9 +63,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress }
 
       {!loading && !failed && kind === 'video' && (
         <View style={styles.placeholder}>
-          {uri ? (
-            <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : null}
+          {uri && <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />}
           <View style={styles.videoOverlay}>
             <Text style={styles.videoIcon}>▶</Text>
             {file.duration != null && (
@@ -81,6 +82,8 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress }
     </TouchableOpacity>
   )
 }
+
+export const clearUriCache = () => uriCache.clear()
 
 const styles = StyleSheet.create({
   container: { borderRadius: 6, overflow: 'hidden', backgroundColor: COLORS.card },

@@ -32,7 +32,8 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.vault.mediasafe"
     },
@@ -51,6 +52,11 @@
         }
       ],
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "88ef988e-6b53-46c6-bf85-e8040a94bea3"
+      }
+    }
   }
 }

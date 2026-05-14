@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
@@ -24,6 +24,7 @@ export default function App() {
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null)
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
+  const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     init()
@@ -35,11 +36,21 @@ export default function App() {
   }, [screen])
 
   const handleAppState = useCallback((state: AppStateStatus) => {
+    if (state === 'active') {
+      if (lockTimer.current) {
+        clearTimeout(lockTimer.current)
+        lockTimer.current = null
+      }
+      return
+    }
     if (state === 'background' || state === 'inactive') {
-      if (screen.name !== 'loading' && screen.name !== 'pinSetup' && screen.name !== 'pinEntry') {
+      if (screen.name === 'loading' || screen.name === 'pinSetup' || screen.name === 'pinEntry') return
+      // 5-секундная задержка — не блокируемся при открытии пикера/уведомлений
+      lockTimer.current = setTimeout(() => {
         setScreen({ name: 'pinEntry' })
         setFileKey(null)
-      }
+        lockTimer.current = null
+      }, 5000)
     }
   }, [screen])
 
@@ -146,9 +157,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.bg}>
-        {tab === 'daily' && <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />}
-        {tab === 'import' && <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />}
-        {tab === 'settings' && <SettingsScreen onLock={lock} onResetComplete={() => setScreen({ name: 'pinSetup' })} />}
+        {/* Все вкладки всегда смонтированы — скрываем через display:none */}
+        <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
+          <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
+        </View>
+        <View style={[styles.fill, tab !== 'import' && styles.hidden]}>
+          <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
+        </View>
+        <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
+          <SettingsScreen onLock={lock} onResetComplete={() => setScreen({ name: 'pinSetup' })} />
+        </View>
         <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />
       </View>
     </SafeAreaProvider>
@@ -157,6 +175,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: COLORS.background },
+  fill: { flex: 1 },
+  hidden: { display: 'none' },
   errorScreen: {
     flex: 1, backgroundColor: '#1a0000', alignItems: 'center', justifyContent: 'center', padding: 24,
   },

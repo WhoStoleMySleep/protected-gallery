@@ -29,11 +29,21 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
 
   const loadDaily = useCallback(async () => {
     const allIds = await getAllFileIds()
-    let selectedIds = await loadDailySelection(today)
-    if (!selectedIds) {
-      selectedIds = selectDaily(allIds)
-      if (selectedIds.length > 0) await saveDailySelection(today, selectedIds)
+    let selectedIds: string[]
+
+    if (allIds.length <= 25) {
+      // Пока файлов мало — всегда показываем все, кеш не нужен
+      selectedIds = allIds
+    } else {
+      const cached = await loadDailySelection(today)
+      if (cached) {
+        selectedIds = cached
+      } else {
+        selectedIds = selectDaily(allIds)
+        await saveDailySelection(today, selectedIds)
+      }
     }
+
     const loaded = await Promise.all(selectedIds.map(id => getFile(id)))
     setFiles(loaded.filter((f): f is VaultFile => f !== null))
   }, [today])
