@@ -30,7 +30,10 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress }
       limit(async () => {
         if (cancelled) return
         try {
-          const tempUri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType)
+          const src = file.thumbPath ?? file.encryptedPath
+          const cacheKey = file.thumbPath ? file.id + '_thumb' : file.id
+          const mime = file.thumbPath ? 'image/jpeg' : file.mimeType
+          const tempUri = await decryptToTemp(src, fileKey, mime, cacheKey)
           uriCache.set(file.id, tempUri)
           if (!cancelled) { setUri(tempUri); setLoading(false) }
         } catch {

@@ -8,6 +8,7 @@ import { VideoView, useVideoPlayer } from 'expo-video'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { getFile } from '../storage/metadata'
 import { decryptToTemp } from '../storage/vault'
+import { limit } from '../utils/concurrency'
 import { getMediaKind, formatFileSize, formatDate, formatDuration } from '../utils/media'
 import type { VaultFile } from '../types'
 import { COLORS } from '../theme'
@@ -49,25 +50,27 @@ const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible 
   )
 }
 
-const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean }> = ({
-  fileId, fileKey, visible,
+const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean; priority: 'high' | 'normal' }> = ({
+  fileId, fileKey, visible, priority,
 }) => {
   const [state, setState] = useState<FileState>({ file: null, uri: null, loading: true, error: false })
 
   useEffect(() => {
     if (!visible) return
     let cancelled = false
-    const task = InteractionManager.runAfterInteractions(async () => {
-      if (cancelled) return
-      setState(s => ({ ...s, loading: true, error: false }))
-      try {
-        const file = await getFile(fileId)
-        if (!file || cancelled) return
-        const uri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType)
-        if (!cancelled) setState({ file, uri, loading: false, error: false })
-      } catch {
-        if (!cancelled) setState(s => ({ ...s, loading: false, error: true }))
-      }
+    const task = InteractionManager.runAfterInteractions(() => {
+      limit(async () => {
+        if (cancelled) return
+        setState(s => ({ ...s, loading: true, error: false }))
+        try {
+          const file = await getFile(fileId)
+          if (!file || cancelled) return
+          const uri = await decryptToTemp(file.encryptedPath, fileKey, file.mimeType, fileId)
+          if (!cancelled) setState({ file, uri, loading: false, error: false })
+        } catch {
+          if (!cancelled) setState(s => ({ ...s, loading: false, error: true }))
+        }
+      }, priority)
     })
     return () => { cancelled = true; task.cancel() }
   }, [fileId, visible])
@@ -145,6 +148,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
             fileId={item}
             fileKey={fileKey}
             visible={Math.abs(index - currentIndex) <= 1}
+            priority={index === currentIndex ? 'high' : 'normal'}
           />
         )}
       />

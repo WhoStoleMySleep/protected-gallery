@@ -5,6 +5,7 @@ export interface VaultFile {
   size: number
   importedAt: number
   encryptedPath: string
+  thumbPath?: string
   width?: number
   height?: number
   duration?: number

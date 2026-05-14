@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { File } from 'expo-file-system'
 import { randomUUID } from 'expo-crypto'
-import { encryptAndSave } from '../storage/vault'
+import { encryptAndSave, generateAndEncryptThumb } from '../storage/vault'
 import { saveFile, getAllFileIds } from '../storage/metadata'
 import { VaultStatsModal } from '../components/VaultStatsModal'
 import { formatFileSize } from '../utils/media'
@@ -82,7 +82,10 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
         const mimeType = asset.mimeType ?? 'application/octet-stream'
         const srcFile = new File(asset.uri)
         const size = srcFile.size || asset.fileSize || 0
-        const encUri = await encryptAndSave(asset.uri, id, fileKey)
+        const [encUri, thumbPath] = await Promise.all([
+          encryptAndSave(asset.uri, id, fileKey),
+          generateAndEncryptThumb(asset.uri, id, mimeType, fileKey),
+        ])
 
         const vaultFile: VaultFile = {
           id,
@@ -91,6 +94,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           size,
           importedAt: Date.now(),
           encryptedPath: encUri,
+          thumbPath: thumbPath ?? undefined,
           width: asset.width,
           height: asset.height,
           duration: asset.duration ? asset.duration * 1000 : undefined,

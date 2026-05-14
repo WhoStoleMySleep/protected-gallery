@@ -6,6 +6,7 @@ import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
 import { getDailyLimit, setDailyLimit } from '../storage/settings'
+import { clearDecryptedCache } from '../storage/decryptedCache'
 import { COLORS } from '../theme'
 
 const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
@@ -58,6 +59,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => 
     try {
       await clearAllMeta()
       await clearVault()
+      await clearDecryptedCache()
       await deletePin()
       await deleteMasterKey()
       onResetComplete()
