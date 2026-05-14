@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator, TouchableOpacity, Alert,
+  Dimensions, ActivityIndicator, TouchableOpacity, Alert, BackHandler,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
@@ -29,6 +29,11 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
   const [refreshing, setRefreshing] = useState(false)
 
   const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true })
+    return () => sub.remove()
+  }, [onBack])
 
   const loadTrash = useCallback(async () => {
     const trashed = await getFilesByStatus('trashed')

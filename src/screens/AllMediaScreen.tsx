@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator, TouchableOpacity,
+  Dimensions, ActivityIndicator, TouchableOpacity, BackHandler,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
@@ -29,6 +29,11 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true })
+    return () => sub.remove()
+  }, [onBack])
 
   const loadAll = useCallback(async () => {
     setLoadError(null)
