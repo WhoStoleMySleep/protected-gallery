@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
-import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
+import { getFilesByStatus, updateFileMeta } from '../storage/metadata'
 import type { VaultFile } from '../types'
 import { COLORS } from '../theme'
 
@@ -22,48 +22,33 @@ interface Props {
   onBack: () => void
 }
 
-export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
+export const ArchiveScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
 
   const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
 
-  const loadAll = useCallback(async () => {
-    setLoadError(null)
-    try {
-      const allIds = await getAllFileIds()
-      const loaded = await Promise.all(allIds.map(id => getFile(id)))
-      const valid = loaded.filter((f): f is VaultFile => f !== null && (!f.status || f.status === 'active'))
-      valid.sort((a, b) => b.importedAt - a.importedAt)
-      setFiles(valid)
-    } catch (e: any) {
-      setLoadError(e?.message ?? String(e))
-    }
+  const loadArchive = useCallback(async () => {
+    const archived = await getFilesByStatus('archived')
+    archived.sort((a, b) => b.importedAt - a.importedAt)
+    setFiles(archived)
   }, [])
 
   React.useEffect(() => {
-    loadAll().finally(() => setLoading(false))
-  }, [loadAll])
+    loadArchive().finally(() => setLoading(false))
+  }, [loadArchive])
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await loadAll()
+    await loadArchive()
     setRefreshing(false)
   }
 
-  const archiveSelected = async () => {
-    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'archived' })))
+  const restore = async () => {
+    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'active' })))
     clearSelection()
-    await loadAll()
-  }
-
-  const trashSelected = async () => {
-    const now = Date.now()
-    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'trashed', trashedAt: now })))
-    clearSelection()
-    await loadAll()
+    await loadArchive()
   }
 
   const fileIds = files.map(f => f.id)
@@ -74,24 +59,18 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
           <Text style={styles.backTxt}>‹ Назад</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Все медиа</Text>
+        <Text style={styles.title}>Архив</Text>
         {!loading && <Text style={styles.count}>{files.length} файлов</Text>}
         {loading && <View style={styles.backBtn} />}
       </View>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
-      ) : loadError ? (
-        <View style={styles.center}>
-          <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
-            Ошибка загрузки:{'\n'}{loadError}
-          </Text>
-        </View>
       ) : files.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyText}>Сейф пуст</Text>
-          <Text style={styles.emptyHint}>Перейдите на вкладку «Импорт», чтобы добавить медиафайлы</Text>
+          <Text style={styles.emptyIcon}>📦</Text>
+          <Text style={styles.emptyText}>Архив пуст</Text>
+          <Text style={styles.emptyHint}>Заархивированные файлы не попадают в ежедневную подборку</Text>
         </View>
       ) : (
         <FlatList
@@ -121,8 +100,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Архив', onPress: archiveSelected },
-            { label: 'Корзина', danger: true, onPress: trashSelected },
+            { label: 'Восстановить', onPress: restore },
           ]}
         />
       )}
@@ -132,7 +110,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,

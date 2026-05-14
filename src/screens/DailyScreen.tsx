@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator, TouchableOpacity,
+  Dimensions, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
-import { getAllFileIds, loadDailySelection, saveDailySelection, getFile } from '../storage/metadata'
-import { getDailyLimit, DEFAULT_DAILY_LIMIT } from '../storage/settings'
+import { SelectionBar } from '../components/SelectionBar'
+import { useSelection } from '../hooks/useSelection'
+import { getActiveFileIds, loadDailySelection, saveDailySelection, getFile, updateFileMeta } from '../storage/metadata'
+import { getDailyLimit } from '../storage/settings'
 import { selectDaily, getTodayKey } from '../utils/randomizer'
 import { formatDate } from '../utils/media'
 import type { VaultFile } from '../types'
@@ -29,20 +31,28 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   const [loadError, setLoadError] = useState<string | null>(null)
   const today = getTodayKey()
 
+  const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
+
   const loadDaily = useCallback(async () => {
     setLoadError(null)
     try {
-      const [allIds, dailyLimit] = await Promise.all([getAllFileIds(), getDailyLimit()])
+      const [activeIds, dailyLimit] = await Promise.all([getActiveFileIds(), getDailyLimit()])
       let selectedIds: string[]
 
-      if (allIds.length <= dailyLimit) {
-        selectedIds = allIds
+      if (activeIds.length <= dailyLimit) {
+        selectedIds = activeIds
       } else {
         const cached = await loadDailySelection(today)
-        if (cached && cached.length === dailyLimit) {
-          selectedIds = cached
+        if (cached) {
+          const validCached = cached.filter(id => activeIds.includes(id))
+          if (validCached.length === dailyLimit) {
+            selectedIds = validCached
+          } else {
+            selectedIds = selectDaily(activeIds, dailyLimit)
+            await saveDailySelection(today, selectedIds)
+          }
         } else {
-          selectedIds = selectDaily(allIds, dailyLimit)
+          selectedIds = selectDaily(activeIds, dailyLimit)
           await saveDailySelection(today, selectedIds)
         }
       }
@@ -54,7 +64,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     }
   }, [today])
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadDaily().finally(() => setLoading(false))
   }, [loadDaily])
 
@@ -64,12 +74,21 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     setRefreshing(false)
   }
 
+  const archiveSelected = async () => {
+    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'archived' })))
+    clearSelection()
+    await loadDaily()
+  }
+
+  const trashSelected = async () => {
+    const now = Date.now()
+    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'trashed', trashedAt: now })))
+    clearSelection()
+    await loadDaily()
+  }
+
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
-      </View>
-    )
+    return <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
   }
 
   if (loadError) {
@@ -83,13 +102,12 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   }
 
   const fileIds = files.map(f => f.id)
-  const dateLabel = formatDate(Date.now())
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Сегодня</Text>
-        <Text style={styles.date}>{dateLabel}</Text>
+        <Text style={styles.date}>{formatDate(Date.now())}</Text>
         <Text style={styles.count}>
           {files.length === 0 ? 'Сейф пуст' : `Файлов сегодня: ${files.length}`}
         </Text>
@@ -114,13 +132,26 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
                 file={item}
                 fileKey={fileKey}
                 size={ITEM_SIZE}
-                onPress={() => onOpenViewer(fileIds, index)}
+                selectionMode={selectionMode}
+                selected={selected.has(item.id)}
+                onPress={() => selectionMode ? toggleItem(item.id) : onOpenViewer(fileIds, index)}
+                onLongPress={() => !selectionMode && enterSelection(item.id)}
               />
             </View>
           )}
         />
       )}
 
+      {selectionMode && (
+        <SelectionBar
+          count={selected.size}
+          onCancel={clearSelection}
+          actions={[
+            { label: 'Архив', onPress: archiveSelected },
+            { label: 'Корзина', danger: true, onPress: trashSelected },
+          ]}
+        />
+      )}
     </SafeAreaView>
   )
 }

@@ -1,3 +1,5 @@
+export type FileStatus = 'active' | 'archived' | 'trashed'
+
 export interface VaultFile {
   id: string
   originalName: string
@@ -9,10 +11,12 @@ export interface VaultFile {
   width?: number
   height?: number
   duration?: number
+  status?: FileStatus   // undefined means 'active' (backwards compat)
+  trashedAt?: number
 }
 
 export type MainTab = 'daily' | 'import' | 'settings'
-export type ViewerReturn = MainTab | 'allMedia'
+export type ViewerReturn = MainTab | 'allMedia' | 'trash' | 'archive'
 
 export type AppScreen =
   | { name: 'loading' }
@@ -23,4 +27,6 @@ export type AppScreen =
   | { name: 'settings' }
   | { name: 'changePin' }
   | { name: 'allMedia' }
+  | { name: 'trash' }
+  | { name: 'archive' }
   | { name: 'viewer'; fileIds: string[]; initialIndex: number; returnTo: ViewerReturn }

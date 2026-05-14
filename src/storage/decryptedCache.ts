@@ -31,6 +31,13 @@ export const setDecryptedUri = async (fileId: string, uri: string): Promise<void
   await AsyncStorage.setItem(STORE_KEY, JSON.stringify(cache))
 }
 
+export const removeDecryptedUris = async (fileIds: string[]): Promise<void> => {
+  const cache = await load()
+  fileIds.forEach(id => { delete cache[id]; delete cache[id + '_thumb'] })
+  mem = cache
+  await AsyncStorage.setItem(STORE_KEY, JSON.stringify(cache))
+}
+
 export const clearDecryptedCache = async (): Promise<void> => {
   mem = {}
   await AsyncStorage.removeItem(STORE_KEY)

@@ -16,9 +16,11 @@ interface Props {
   onResetComplete: () => void
   onChangePin: () => void
   onAllMedia: () => void
+  onTrash: () => void
+  onArchive: () => void
 }
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive }) => {
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
 
@@ -133,7 +135,23 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
             <Text style={styles.rowIcon}>🗂</Text>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Все медиа</Text>
-              <Text style={styles.rowDesc}>Просмотреть все файлы в сейфе</Text>
+              <Text style={styles.rowDesc}>Все активные файлы в сейфе</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.row} onPress={onArchive}>
+            <Text style={styles.rowIcon}>📦</Text>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Архив</Text>
+              <Text style={styles.rowDesc}>Файлы не в подборке, хранятся бессрочно</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onTrash}>
+            <Text style={styles.rowIcon}>🗑</Text>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Корзина</Text>
+              <Text style={styles.rowDesc}>Автоочистка через 30 дней</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>

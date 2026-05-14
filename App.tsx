@@ -6,7 +6,7 @@ import * as LocalAuthentication from 'expo-local-authentication'
 import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey } from './src/crypto/keys'
 import { initMetadataStore } from './src/storage/metadata'
-import { ensureVaultDir } from './src/storage/vault'
+import { ensureVaultDir, purgeExpiredTrash } from './src/storage/vault'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
 import { PinEntryScreen } from './src/screens/PinEntryScreen'
@@ -16,6 +16,8 @@ import { SettingsScreen } from './src/screens/SettingsScreen'
 import { ViewerScreen } from './src/screens/ViewerScreen'
 import { ChangePinScreen } from './src/screens/ChangePinScreen'
 import { AllMediaScreen } from './src/screens/AllMediaScreen'
+import { TrashScreen } from './src/screens/TrashScreen'
+import { ArchiveScreen } from './src/screens/ArchiveScreen'
 import { TabBar } from './src/components/TabBar'
 
 import type { AppScreen, MainTab, ViewerReturn } from './src/types'
@@ -89,6 +91,7 @@ export default function App() {
       ensureVaultDir()
       setFileKey(masterKey)
       setScreen({ name: 'daily' })
+      purgeExpiredTrash().catch(() => {})
     } catch (e: any) {
       setInitError(e?.message ?? String(e))
     }
@@ -100,9 +103,11 @@ export default function App() {
   }
 
   const openViewer = (fileIds: string[], index: number) => {
+    const name = screen.name
     const returnTo: ViewerReturn =
-      screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings' || screen.name === 'allMedia'
-        ? screen.name
+      name === 'daily' || name === 'import' || name === 'settings' ||
+      name === 'allMedia' || name === 'trash' || name === 'archive'
+        ? name
         : 'daily'
     setScreen({ name: 'viewer', fileIds, initialIndex: index, returnTo })
   }
@@ -116,7 +121,8 @@ export default function App() {
     if (screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings') return screen.name
     if (screen.name === 'viewer') {
       const r = screen.returnTo
-      return r === 'allMedia' ? 'settings' : r
+      if (r === 'allMedia' || r === 'trash' || r === 'archive') return 'settings'
+      return r
     }
     return 'daily'
   }
@@ -172,6 +178,30 @@ export default function App() {
     )
   }
 
+  if (screen.name === 'trash' && fileKey) {
+    return (
+      <SafeAreaProvider>
+        <TrashScreen
+          fileKey={fileKey}
+          onOpenViewer={openViewer}
+          onBack={() => setScreen({ name: 'settings' })}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
+  if (screen.name === 'archive' && fileKey) {
+    return (
+      <SafeAreaProvider>
+        <ArchiveScreen
+          fileKey={fileKey}
+          onOpenViewer={openViewer}
+          onBack={() => setScreen({ name: 'settings' })}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
   if (!fileKey) return <View style={styles.bg} />
 
   const tab = currentTab()
@@ -192,6 +222,8 @@ export default function App() {
             onResetComplete={() => setScreen({ name: 'pinSetup' })}
             onChangePin={() => setScreen({ name: 'changePin' })}
             onAllMedia={() => setScreen({ name: 'allMedia' })}
+            onTrash={() => setScreen({ name: 'trash' })}
+            onArchive={() => setScreen({ name: 'archive' })}
           />
         </View>
         {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}

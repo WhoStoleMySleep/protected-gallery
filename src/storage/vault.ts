@@ -2,7 +2,9 @@ import { File, Directory, Paths } from 'expo-file-system'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { encryptBytes, decryptBytes } from '../crypto/cipher'
 import { getExtension, getMediaKind } from '../utils/media'
-import { getDecryptedUri, setDecryptedUri } from './decryptedCache'
+import { getDecryptedUri, setDecryptedUri, removeDecryptedUris } from './decryptedCache'
+import { deleteFileMeta, getFilesByStatus } from './metadata'
+import type { VaultFile } from '../types'
 
 const yield_ = () => new Promise<void>(r => setTimeout(r, 0))
 
@@ -81,6 +83,23 @@ export const decryptToTemp = async (
 export const deleteEncFile = (encUri: string) => {
   const file = new File(encUri)
   if (file.exists) file.delete()
+}
+
+export const permanentlyDeleteFiles = async (files: VaultFile[]): Promise<void> => {
+  await removeDecryptedUris(files.map(f => f.id))
+  await Promise.all(files.map(async f => {
+    deleteEncFile(f.encryptedPath)
+    if (f.thumbPath) deleteEncFile(f.thumbPath)
+    await deleteFileMeta(f.id)
+  }))
+}
+
+export const purgeExpiredTrash = async (): Promise<void> => {
+  const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
+  const now = Date.now()
+  const trashed = await getFilesByStatus('trashed')
+  const expired = trashed.filter(f => f.trashedAt && now - f.trashedAt > THIRTY_DAYS)
+  if (expired.length > 0) await permanentlyDeleteFiles(expired)
 }
 
 export const clearVault = () => {

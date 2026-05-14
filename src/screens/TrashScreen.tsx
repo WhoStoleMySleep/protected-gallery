@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator, TouchableOpacity,
+  Dimensions, ActivityIndicator, TouchableOpacity, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
-import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
+import { getFilesByStatus, updateFileMeta } from '../storage/metadata'
+import { permanentlyDeleteFiles } from '../storage/vault'
 import type { VaultFile } from '../types'
 import { COLORS } from '../theme'
 
@@ -22,48 +23,73 @@ interface Props {
   onBack: () => void
 }
 
-export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
+export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
 
   const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
 
-  const loadAll = useCallback(async () => {
-    setLoadError(null)
-    try {
-      const allIds = await getAllFileIds()
-      const loaded = await Promise.all(allIds.map(id => getFile(id)))
-      const valid = loaded.filter((f): f is VaultFile => f !== null && (!f.status || f.status === 'active'))
-      valid.sort((a, b) => b.importedAt - a.importedAt)
-      setFiles(valid)
-    } catch (e: any) {
-      setLoadError(e?.message ?? String(e))
-    }
+  const loadTrash = useCallback(async () => {
+    const trashed = await getFilesByStatus('trashed')
+    trashed.sort((a, b) => (b.trashedAt ?? b.importedAt) - (a.trashedAt ?? a.importedAt))
+    setFiles(trashed)
   }, [])
 
   React.useEffect(() => {
-    loadAll().finally(() => setLoading(false))
-  }, [loadAll])
+    loadTrash().finally(() => setLoading(false))
+  }, [loadTrash])
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await loadAll()
+    await loadTrash()
     setRefreshing(false)
   }
 
-  const archiveSelected = async () => {
-    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'archived' })))
+  const restore = async () => {
+    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'active', trashedAt: undefined })))
     clearSelection()
-    await loadAll()
+    await loadTrash()
   }
 
-  const trashSelected = async () => {
-    const now = Date.now()
-    await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'trashed', trashedAt: now })))
-    clearSelection()
-    await loadAll()
+  const deletePermanently = () => {
+    const count = selected.size
+    Alert.alert(
+      'Удалить навсегда?',
+      `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'} будут безвозвратно удалены.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: async () => {
+            await permanentlyDeleteFiles(files.filter(f => selected.has(f.id)))
+            clearSelection()
+            await loadTrash()
+          },
+        },
+      ],
+    )
+  }
+
+  const clearAll = () => {
+    if (files.length === 0) return
+    Alert.alert(
+      'Очистить корзину?',
+      `Все ${files.length} файлов будут безвозвратно удалены.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Очистить',
+          style: 'destructive',
+          onPress: async () => {
+            await permanentlyDeleteFiles(files)
+            clearSelection()
+            await loadTrash()
+          },
+        },
+      ],
+    )
   }
 
   const fileIds = files.map(f => f.id)
@@ -74,24 +100,27 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
           <Text style={styles.backTxt}>‹ Назад</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Все медиа</Text>
-        {!loading && <Text style={styles.count}>{files.length} файлов</Text>}
-        {loading && <View style={styles.backBtn} />}
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>Корзина</Text>
+          {!loading && files.length > 0 && (
+            <Text style={styles.subtitle}>Автоочистка через 30 дней</Text>
+          )}
+        </View>
+        {!loading && files.length > 0 ? (
+          <TouchableOpacity onPress={clearAll} style={styles.backBtn}>
+            <Text style={[styles.backTxt, { color: COLORS.danger, textAlign: 'right' }]}>Очистить</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backBtn} />
+        )}
       </View>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
-      ) : loadError ? (
-        <View style={styles.center}>
-          <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
-            Ошибка загрузки:{'\n'}{loadError}
-          </Text>
-        </View>
       ) : files.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyText}>Сейф пуст</Text>
-          <Text style={styles.emptyHint}>Перейдите на вкладку «Импорт», чтобы добавить медиафайлы</Text>
+          <Text style={styles.emptyIcon}>🗑</Text>
+          <Text style={styles.emptyText}>Корзина пуста</Text>
         </View>
       ) : (
         <FlatList
@@ -121,8 +150,8 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Архив', onPress: archiveSelected },
-            { label: 'Корзина', danger: true, onPress: trashSelected },
+            { label: 'Восстановить', onPress: restore },
+            { label: 'Удалить', danger: true, onPress: deletePermanently },
           ]}
         />
       )}
@@ -132,18 +161,18 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
   },
   backBtn: { minWidth: 64 },
   backTxt: { color: COLORS.accent, fontSize: 16, fontWeight: '600' },
+  headerCenter: { flex: 1, alignItems: 'center' },
   title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  count: { fontSize: 13, color: COLORS.subtext, minWidth: 64, textAlign: 'right' },
+  subtitle: { fontSize: 11, color: COLORS.subtext, marginTop: 2 },
   grid: { padding: GAP / 2 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyIcon: { fontSize: 56, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 20 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.text },
 })
