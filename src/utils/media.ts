@@ -1,0 +1,43 @@
+export type MediaKind = 'image' | 'video' | 'gif' | 'unknown'
+
+export const getMediaKind = (mimeType: string): MediaKind => {
+  if (mimeType === 'image/gif') return 'gif'
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType.startsWith('video/')) return 'video'
+  return 'unknown'
+}
+
+export const getExtension = (mimeType: string): string => {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/heic': 'heic',
+    'video/mp4': 'mp4',
+    'video/quicktime': 'mov',
+    'video/x-msvideo': 'avi',
+    'video/webm': 'webm',
+    'video/3gpp': '3gp',
+  }
+  return map[mimeType] ?? mimeType.split('/')[1] ?? 'bin'
+}
+
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+}
+
+export const formatDuration = (ms: number): string => {
+  const seconds = Math.floor(ms / 1000)
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+export const formatDate = (timestamp: number): string => {
+  const d = new Date(timestamp)
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+}
