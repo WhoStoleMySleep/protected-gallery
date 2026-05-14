@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   FlatList, ActivityIndicator, StatusBar, InteractionManager,
+  Animated, PanResponder, BackHandler,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -14,6 +15,8 @@ import type { VaultFile } from '../types'
 import { COLORS } from '../theme'
 
 const { width, height } = Dimensions.get('window')
+const DISMISS_THRESHOLD = 130
+const DISMISS_VELOCITY = 0.6
 
 interface Props {
   fileIds: string[]
@@ -125,12 +128,73 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
   const [showInfo, setShowInfo] = useState(false)
   const [currentFile, setCurrentFile] = useState<VaultFile | null>(null)
 
+  const translateY = useRef(new Animated.Value(0)).current
+
+  const borderRadius = translateY.interpolate({
+    inputRange: [0, DISMISS_THRESHOLD],
+    outputRange: [0, 20],
+    extrapolate: 'clamp',
+  })
+
+  const scale = translateY.interpolate({
+    inputRange: [0, height],
+    outputRange: [1, 0.88],
+    extrapolate: 'clamp',
+  })
+
+  const dismiss = (velocity = 0) => {
+    const duration = velocity > 0 ? Math.max(100, Math.min(250, 200 / velocity)) : 220
+    Animated.timing(translateY, {
+      toValue: height,
+      duration,
+      useNativeDriver: true,
+    }).start(onClose)
+  }
+
+  const snapBack = () => {
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 10,
+    }).start()
+  }
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, { dy, dx }) =>
+      dy > 8 && Math.abs(dy) > Math.abs(dx) * 1.5,
+    onPanResponderMove: (_, { dy }) => {
+      if (dy > 0) translateY.setValue(dy)
+    },
+    onPanResponderRelease: (_, { dy, vy }) => {
+      if (dy > DISMISS_THRESHOLD || vy > DISMISS_VELOCITY) {
+        dismiss(vy)
+      } else {
+        snapBack()
+      }
+    },
+    onPanResponderTerminate: () => {
+      snapBack()
+    },
+  })).current
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      dismiss()
+      return true
+    })
+    return () => sub.remove()
+  }, [])
+
   useEffect(() => {
     getFile(fileIds[currentIndex]).then(setCurrentFile)
   }, [currentIndex])
 
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={[styles.container, { transform: [{ translateY }, { scale }], borderRadius }]}
+      {...panResponder.panHandlers}
+    >
       <StatusBar hidden />
       <FlatList
         data={fileIds}
@@ -154,7 +218,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
       />
 
       <SafeAreaView edges={['top']} style={styles.topBar}>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => dismiss()}>
           <Text style={styles.closeTxt}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.counter}>{currentIndex + 1} / {fileIds.length}</Text>
@@ -176,12 +240,12 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
           )}
         </View>
       )}
-    </View>
+    </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
   slide: { width, height, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
   media: { width, height },
   topBar: {

@@ -149,19 +149,6 @@ export default function App() {
     )
   }
 
-  if (screen.name === 'viewer' && fileKey) {
-    return (
-      <SafeAreaProvider>
-        <ViewerScreen
-          fileIds={screen.fileIds}
-          initialIndex={screen.initialIndex}
-          fileKey={fileKey}
-          onClose={closeViewer}
-        />
-      </SafeAreaProvider>
-    )
-  }
-
   if (screen.name === 'changePin') {
     return (
       <SafeAreaProvider>
@@ -207,7 +194,19 @@ export default function App() {
             onAllMedia={() => setScreen({ name: 'allMedia' })}
           />
         </View>
-        <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />
+        {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}
+
+        {/* Вьюер поверх таб-лэйаута — при свайпе вниз виден грид позади */}
+        {screen.name === 'viewer' && (
+          <View style={StyleSheet.absoluteFill}>
+            <ViewerScreen
+              fileIds={screen.fileIds}
+              initialIndex={screen.initialIndex}
+              fileKey={fileKey}
+              onClose={closeViewer}
+            />
+          </View>
+        )}
       </View>
     </SafeAreaProvider>
   )
