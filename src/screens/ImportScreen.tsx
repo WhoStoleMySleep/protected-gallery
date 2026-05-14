@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { File } from 'expo-file-system'
 import { randomUUID } from 'expo-crypto'
@@ -153,7 +154,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           </View>
         ) : (
           <TouchableOpacity style={styles.importBtn} onPress={pickAndImport}>
-            <Text style={styles.importIcon}>+</Text>
+            <Ionicons name="cloud-download-outline" size={40} color={COLORS.accent} style={styles.importIcon} />
             <Text style={styles.importText}>Выбрать из галереи</Text>
             <Text style={styles.importHint}>Фото, видео, GIF</Text>
           </TouchableOpacity>
@@ -161,10 +162,22 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Как работает сейф</Text>
-          <Text style={styles.infoItem}>🔐  Шифрование AES-256-GCM</Text>
-          <Text style={styles.infoItem}>📁  Оригиналы в галерее не затрагиваются</Text>
-          <Text style={styles.infoItem}>🎲  Каждый день — случайные 25 файлов</Text>
-          <Text style={styles.infoItem}>🔒  Без PIN данные недоступны</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="lock-closed-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Text style={styles.infoItem}>Шифрование AES-256-GCM</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="folder-open-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Text style={styles.infoItem}>Оригиналы в галерее не затрагиваются</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="shuffle-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Text style={styles.infoItem}>Каждый день — случайные 25 файлов</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="eye-off-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Text style={styles.infoItem}>Без PIN данные недоступны</Text>
+          </View>
         </View>
       </ScrollView>
       <VaultStatsModal visible={statsVisible} onClose={() => setStatsVisible(false)} />
@@ -187,7 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card, borderRadius: 16, padding: 32,
     alignItems: 'center', borderWidth: 2, borderColor: COLORS.accent, borderStyle: 'dashed',
   },
-  importIcon: { fontSize: 36, color: COLORS.accent, fontWeight: '300', marginBottom: 8 },
+  importIcon: { marginBottom: 8 },
   importText: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   importHint: { fontSize: 13, color: COLORS.subtext },
   progressCard: {
@@ -198,5 +211,7 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: COLORS.accent, borderRadius: 2 },
   infoCard: { backgroundColor: COLORS.card, borderRadius: 12, padding: 16, gap: 10 },
   infoTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  infoItem: { fontSize: 13, color: COLORS.subtext, lineHeight: 19 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoIcon: {},
+  infoItem: { fontSize: 13, color: COLORS.subtext, lineHeight: 19, flex: 1 },
 })

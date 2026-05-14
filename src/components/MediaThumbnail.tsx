@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native'
 import { Image } from 'expo-image'
+import { Ionicons } from '@expo/vector-icons'
 import type { VaultFile } from '../types'
 import { getMediaKind, formatDuration } from '../utils/media'
 import { decryptToTemp } from '../storage/vault'
@@ -63,7 +64,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
 
       {!loading && failed && (
         <View style={styles.placeholder}>
-          <Text style={styles.icon}>⚠️</Text>
+          <Ionicons name="warning-outline" size={28} color={COLORS.subtext} />
         </View>
       )}
 
@@ -75,7 +76,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
         <View style={styles.placeholder}>
           {uri && <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />}
           <View style={styles.videoOverlay}>
-            <Text style={styles.videoIcon}>▶</Text>
+            <Ionicons name="play" size={13} color="#fff" style={styles.videoIcon} />
             {file.duration != null && (
               <Text style={styles.duration}>{formatDuration(file.duration)}</Text>
             )}
@@ -85,14 +86,14 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
 
       {!loading && !failed && kind === 'unknown' && (
         <View style={styles.placeholder}>
-          <Text style={styles.icon}>📄</Text>
+          <Ionicons name="document-outline" size={28} color={COLORS.subtext} />
           <Text style={styles.fileName} numberOfLines={2}>{file.originalName}</Text>
         </View>
       )}
 
       {selectionMode && (
         <View style={[styles.selectionBadge, selected && styles.selectionBadgeOn]}>
-          {selected && <Text style={styles.checkmark}>✓</Text>}
+          {selected && <Ionicons name="checkmark" size={13} color="#fff" />}
         </View>
       )}
     </TouchableOpacity>
@@ -116,9 +117,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  videoIcon: { color: '#fff', fontSize: 14, textShadowColor: '#000', textShadowRadius: 3 },
+  videoIcon: { textShadowColor: '#000', textShadowRadius: 3 },
   duration: { color: '#fff', fontSize: 10, fontWeight: '700', textShadowColor: '#000', textShadowRadius: 3 },
-  icon: { fontSize: 28 },
   fileName: { color: COLORS.subtext, fontSize: 10, textAlign: 'center', paddingHorizontal: 4, marginTop: 4 },
   selectionBadge: {
     position: 'absolute', top: 5, right: 5,
@@ -131,5 +131,4 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
     borderColor: COLORS.accent,
   },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700', lineHeight: 14 },
 })

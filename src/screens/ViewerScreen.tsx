@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { Ionicons } from '@expo/vector-icons'
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   FlatList, ActivityIndicator, StatusBar, InteractionManager,
@@ -89,7 +90,7 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   if (state.error || !state.file || !state.uri) {
     return (
       <View style={styles.slide}>
-        <Text style={{ fontSize: 32 }}>⚠️</Text>
+        <Ionicons name="warning-outline" size={32} color={COLORS.subtext} />
         <Text style={{ color: COLORS.subtext, marginTop: 8 }}>Ошибка загрузки</Text>
       </View>
     )
@@ -115,7 +116,7 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
 
   return (
     <View style={styles.slide}>
-      <Text style={{ fontSize: 48 }}>📄</Text>
+      <Ionicons name="document-outline" size={48} color={COLORS.subtext} />
       <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
         {state.file.originalName}
       </Text>

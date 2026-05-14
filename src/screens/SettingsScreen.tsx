@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
@@ -134,28 +135,34 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>МЕДИАТЕКА</Text>
           <TouchableOpacity style={styles.row} onPress={onAllMedia}>
-            <Text style={styles.rowIcon}>🗂</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="grid-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Все медиа</Text>
               <Text style={styles.rowDesc}>Все активные файлы в сейфе</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.row} onPress={onArchive}>
-            <Text style={styles.rowIcon}>📦</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="archive-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Архив</Text>
               <Text style={styles.rowDesc}>Файлы не в подборке, хранятся бессрочно</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onTrash}>
-            <Text style={styles.rowIcon}>🗑</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="trash-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Корзина</Text>
               <Text style={styles.rowDesc}>Автоочистка через 30 дней</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
           </TouchableOpacity>
         </View>
 
@@ -163,26 +170,32 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
           <Text style={styles.sectionLabel}>БЕЗОПАСНОСТЬ</Text>
           {vaultMode === 'real' && (
             <TouchableOpacity style={styles.row} onPress={onChangePin}>
-              <Text style={styles.rowIcon}>🔑</Text>
+              <View style={styles.rowIconWrap}>
+                <Ionicons name="key-outline" size={20} color={COLORS.subtext} />
+              </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>Сменить PIN-код</Text>
                 <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
             </TouchableOpacity>
           )}
           {vaultMode === 'real' && (
             <TouchableOpacity style={styles.row} onPress={onSafeModeSetup}>
-              <Text style={styles.rowIcon}>🎭</Text>
+              <View style={styles.rowIconWrap}>
+                <Ionicons name="shield-half-outline" size={20} color={COLORS.subtext} />
+              </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>Безопасный режим</Text>
                 <Text style={styles.rowDesc}>Отдельное хранилище с другим PIN-кодом</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
             </TouchableOpacity>
           )}
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onLock}>
-            <Text style={styles.rowIcon}>🔒</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="lock-closed-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Заблокировать сейф</Text>
               <Text style={styles.rowDesc}>Выйти и потребовать PIN при следующем открытии</Text>
@@ -193,14 +206,18 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>ИНФОРМАЦИЯ</Text>
           <View style={styles.row}>
-            <Text style={styles.rowIcon}>🛡</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Шифрование</Text>
               <Text style={styles.rowDesc}>AES-256-GCM, ключи в Android Keystore</Text>
             </View>
           </View>
           <View style={[styles.row, styles.rowNoBorder]}>
-            <Text style={styles.rowIcon}>📵</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="cloud-offline-outline" size={20} color={COLORS.subtext} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Полностью офлайн</Text>
               <Text style={styles.rowDesc}>Приложение никогда не обращается в интернет</Text>
@@ -211,7 +228,9 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>ОПАСНАЯ ЗОНА</Text>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={confirmDeleteAll}>
-            <Text style={styles.rowIcon}>🗑</Text>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+            </View>
             <View style={styles.rowBody}>
               <Text style={[styles.rowTitle, { color: COLORS.danger }]}>Удалить все данные</Text>
               <Text style={styles.rowDesc}>Необратимо. Файлы из галереи не затрагиваются.</Text>
@@ -239,7 +258,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   rowNoBorder: { borderBottomWidth: 0 },
-  rowIcon: { fontSize: 22, width: 32, textAlign: 'center' },
+  rowIconWrap: { width: 32, alignItems: 'center' },
   rowBody: { flex: 1 },
   rowTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginBottom: 2 },
   rowDesc: { fontSize: 12, color: COLORS.subtext, lineHeight: 17 },
@@ -260,5 +279,4 @@ const styles = StyleSheet.create({
   limitBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   limitTxt: { color: COLORS.subtext, fontSize: 14, fontWeight: '600' },
   limitTxtActive: { color: '#fff' },
-  chevron: { color: COLORS.subtext, fontSize: 20, fontWeight: '300' },
 })

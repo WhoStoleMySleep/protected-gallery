@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { getAllFiles } from '../storage/metadata'
 import { getMediaKind } from '../utils/media'
 import { formatFileSize } from '../utils/media'
@@ -70,14 +71,14 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
 
               <View style={styles.divider} />
 
-              {[
-                { label: 'Фото', icon: '🖼', data: stats.image },
-                { label: 'Видео', icon: '🎬', data: stats.video },
-                { label: 'GIF', icon: '🎞', data: stats.gif },
-                { label: 'Другое', icon: '📄', data: stats.other },
-              ].filter(r => r.data.count > 0).map(row => (
+              {([
+                { label: 'Фото', icon: 'image-outline', data: stats.image },
+                { label: 'Видео', icon: 'videocam-outline', data: stats.video },
+                { label: 'GIF', icon: 'film-outline', data: stats.gif },
+                { label: 'Другое', icon: 'document-outline', data: stats.other },
+              ] as const).filter(r => r.data.count > 0).map(row => (
                 <View key={row.label} style={styles.row}>
-                  <Text style={styles.rowIcon}>{row.icon}</Text>
+                  <Ionicons name={row.icon} size={20} color={COLORS.subtext} style={styles.rowIcon} />
                   <Text style={styles.rowLabel}>{row.label}</Text>
                   <Text style={styles.rowCount}>{row.data.count} шт.</Text>
                   <Text style={styles.rowSize}>{formatFileSize(row.data.size)}</Text>
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10, gap: 10,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  rowIcon: { fontSize: 20, width: 28 },
+  rowIcon: { width: 28 },
   rowLabel: { flex: 1, fontSize: 15, color: COLORS.text, fontWeight: '500' },
   rowCount: { fontSize: 14, color: COLORS.subtextLight, marginRight: 8 },
   rowSize: { fontSize: 14, color: COLORS.accent, fontWeight: '600', minWidth: 72, textAlign: 'right' },

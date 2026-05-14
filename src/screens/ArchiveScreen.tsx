@@ -4,6 +4,7 @@ import {
   Dimensions, ActivityIndicator, TouchableOpacity, BackHandler,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
@@ -73,7 +74,7 @@ export const ArchiveScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }
         <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
       ) : files.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📦</Text>
+          <Ionicons name="archive-outline" size={48} color={COLORS.subtext} style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Архив пуст</Text>
           <Text style={styles.emptyHint}>Заархивированные файлы не попадают в ежедневную подборку</Text>
         </View>
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   count: { fontSize: 13, color: COLORS.subtext, minWidth: 64, textAlign: 'right' },
   grid: { padding: GAP / 2 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyIcon: { fontSize: 56, marginBottom: 16 },
+  emptyIcon: { marginBottom: 16 },
   emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
   emptyHint: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 20 },
 })

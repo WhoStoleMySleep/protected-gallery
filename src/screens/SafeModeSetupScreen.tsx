@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { PinPad } from '../components/PinPad'
 import { setupSafePin, safePinExists, deleteSafePin } from '../crypto/pin'
 import { generateAndStoreSafeKey, deleteSafeKey } from '../crypto/keys'
@@ -122,7 +123,7 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.icon}>🎭</Text>
+        <Ionicons name="shield-half-outline" size={56} color={COLORS.accent} style={styles.icon} />
 
         {!isConfigured ? (
           <>
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   cancel: { color: COLORS.accent, fontSize: 16 },
   title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  icon: { fontSize: 56, marginBottom: 16 },
+  icon: { marginBottom: 16 },
   heading: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
   desc: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
   primaryBtn: {
