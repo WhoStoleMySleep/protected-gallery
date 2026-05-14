@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { COLORS } from '../theme'
 
 export interface SelectionAction {
@@ -14,21 +15,24 @@ interface Props {
   actions: SelectionAction[]
 }
 
-export const SelectionBar: React.FC<Props> = ({ count, onCancel, actions }) => (
-  <View style={styles.container}>
-    <TouchableOpacity onPress={onCancel} style={styles.side}>
-      <Text style={styles.cancelTxt}>Отмена</Text>
-    </TouchableOpacity>
-    <Text style={styles.count}>{count} выбрано</Text>
-    <View style={[styles.side, styles.actionsRow]}>
-      {actions.map(a => (
-        <TouchableOpacity key={a.label} onPress={a.onPress}>
-          <Text style={[styles.actionTxt, a.danger && styles.actionDanger]}>{a.label}</Text>
-        </TouchableOpacity>
-      ))}
+export const SelectionBar: React.FC<Props> = ({ count, onCancel, actions }) => {
+  const { bottom } = useSafeAreaInsets()
+  return (
+    <View style={[styles.container, { paddingBottom: Math.max(bottom, 16) }]}>
+      <TouchableOpacity onPress={onCancel} style={styles.side}>
+        <Text style={styles.cancelTxt}>Отмена</Text>
+      </TouchableOpacity>
+      <Text style={styles.count}>{count} выбрано</Text>
+      <View style={[styles.side, styles.actionsRow]}>
+        {actions.map(a => (
+          <TouchableOpacity key={a.label} onPress={a.onPress}>
+            <Text style={[styles.actionTxt, a.danger && styles.actionDanger]}>{a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
-  </View>
-)
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
