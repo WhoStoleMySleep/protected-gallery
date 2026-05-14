@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
@@ -20,12 +20,22 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => 
   const [dailyLimit, setDailyLimitState] = useState(25)
 
   useEffect(() => {
-    getDailyLimit().then(setDailyLimitState)
+    getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
   }, [])
 
+  const [limitInput, setLimitInput] = useState('')
+
   const changeDailyLimit = async (val: number) => {
-    setDailyLimitState(val)
-    await setDailyLimit(val)
+    const clamped = Math.max(1, val)
+    setDailyLimitState(clamped)
+    setLimitInput(String(clamped))
+    await setDailyLimit(clamped)
+  }
+
+  const handleLimitInput = (text: string) => {
+    setLimitInput(text)
+    const num = parseInt(text, 10)
+    if (!isNaN(num) && num > 0) changeDailyLimit(num)
   }
 
   const confirmDeleteAll = () => {
@@ -83,6 +93,19 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete }) => 
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Файлов в день</Text>
               <Text style={styles.rowDesc}>Сколько файлов показывать во вкладке «Сегодня»</Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.limitInput}
+                  value={limitInput}
+                  onChangeText={handleLimitInput}
+                  keyboardType="number-pad"
+                  placeholder="Число"
+                  placeholderTextColor={COLORS.subtext}
+                  maxLength={4}
+                  returnKeyType="done"
+                />
+                <Text style={styles.limitInputLabel}>файлов/день</Text>
+              </View>
               <View style={styles.limitRow}>
                 {LIMIT_OPTIONS.map(opt => (
                   <TouchableOpacity
@@ -166,7 +189,14 @@ const styles = StyleSheet.create({
   rowDesc: { fontSize: 12, color: COLORS.subtext, lineHeight: 17 },
   aboutBtn: { alignItems: 'center', padding: 12 },
   aboutText: { color: COLORS.subtext, fontSize: 13 },
-  limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 4 },
+  limitInput: {
+    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    color: COLORS.text, fontSize: 16, fontWeight: '700', width: 80, textAlign: 'center',
+  },
+  limitInputLabel: { color: COLORS.subtext, fontSize: 13 },
+  limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   limitBtn: {
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
     backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,

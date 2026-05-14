@@ -39,7 +39,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
         selectedIds = allIds
       } else {
         const cached = await loadDailySelection(today)
-        if (cached) {
+        if (cached && cached.length === dailyLimit) {
           selectedIds = cached
         } else {
           selectedIds = selectDaily(allIds, dailyLimit)
