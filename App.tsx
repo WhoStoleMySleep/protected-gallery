@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, StyleSheet, AppState, AppStateStatus } from 'react-native'
+import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
 
@@ -23,6 +23,7 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>({ name: 'loading' })
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null)
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
+  const [initError, setInitError] = useState<string | null>(null)
 
   useEffect(() => {
     init()
@@ -43,28 +44,32 @@ export default function App() {
   }, [screen])
 
   const init = async () => {
-    const [pinReady, hasBioHW] = await Promise.all([
-      pinExists(),
-      LocalAuthentication.hasHardwareAsync(),
-    ])
-    if (hasBioHW) {
-      const enrolled = await LocalAuthentication.isEnrolledAsync()
-      setBiometricsAvailable(enrolled)
-    }
-    if (!pinReady) {
-      if (!(await masterKeyExists())) await generateAndStoreMasterKey()
-      setScreen({ name: 'pinSetup' })
-    } else {
-      setScreen({ name: 'pinEntry' })
+    try {
+      const [pinReady, hasBioHW] = await Promise.all([
+        pinExists(),
+        LocalAuthentication.hasHardwareAsync(),
+      ])
+      if (hasBioHW) {
+        const enrolled = await LocalAuthentication.isEnrolledAsync()
+        setBiometricsAvailable(enrolled)
+      }
+      if (!pinReady) {
+        if (!(await masterKeyExists())) await generateAndStoreMasterKey()
+        setScreen({ name: 'pinSetup' })
+      } else {
+        setScreen({ name: 'pinEntry' })
+      }
+    } catch (e: any) {
+      setInitError(e?.message ?? String(e))
     }
   }
 
   const unlock = async () => {
     let masterKey = await loadMasterKey()
     if (!masterKey) masterKey = await generateAndStoreMasterKey()
-    const metaKey = deriveSubKey(masterKey, 'metadata')
+    const metaKey = await deriveSubKey(masterKey, 'metadata')
     initMetadataStore(metaKey)
-    await ensureVaultDir()
+    ensureVaultDir()
     setFileKey(masterKey)
     setScreen({ name: 'daily' })
   }
@@ -91,6 +96,16 @@ export default function App() {
     if (screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings') return screen.name
     if (screen.name === 'viewer') return screen.returnTo
     return 'daily'
+  }
+
+  if (initError) {
+    return (
+      <View style={styles.errorScreen}>
+        <Text style={styles.errorTitle}>Ошибка запуска</Text>
+        <Text style={styles.errorMsg}>{initError}</Text>
+        <Text style={styles.errorHint}>Откройте консоль (j) для подробностей</Text>
+      </View>
+    )
   }
 
   if (screen.name === 'loading') return <View style={styles.bg} />
@@ -142,4 +157,10 @@ export default function App() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: COLORS.background },
+  errorScreen: {
+    flex: 1, backgroundColor: '#1a0000', alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  errorTitle: { color: '#ff6b6b', fontSize: 20, fontWeight: '700', marginBottom: 12 },
+  errorMsg: { color: '#ffaaaa', fontSize: 13, fontFamily: 'monospace', textAlign: 'center', marginBottom: 16 },
+  errorHint: { color: '#888', fontSize: 12 },
 })

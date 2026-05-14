@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { File } from 'expo-file-system'
+import { randomUUID } from 'expo-crypto'
 import { encryptAndSave } from '../storage/vault'
 import { saveFile, getAllFileIds } from '../storage/metadata'
 import { formatFileSize } from '../utils/media'
@@ -75,7 +76,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
       setProgress({ current: i + 1, total: assets.length, name })
 
       try {
-        const id = crypto.randomUUID()
+        const id = randomUUID()
         const mimeType = asset.mimeType ?? 'application/octet-stream'
         const srcFile = new File(asset.uri)
         const size = srcFile.size || asset.fileSize || 0

@@ -4,7 +4,7 @@ import {
   FlatList, ActivityIndicator, StatusBar,
 } from 'react-native'
 import { Image } from 'expo-image'
-import { Video, ResizeMode } from 'expo-av'
+import { VideoView, useVideoPlayer } from 'expo-video'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { getFile } from '../storage/metadata'
 import { decryptToTemp } from '../storage/vault'
@@ -28,7 +28,28 @@ interface FileState {
   error: boolean
 }
 
-const FileViewer: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean }> = ({
+const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible }) => {
+  const player = useVideoPlayer({ uri }, p => {
+    p.loop = true
+    if (visible) p.play()
+  })
+
+  useEffect(() => {
+    if (visible) player.play()
+    else player.pause()
+  }, [visible])
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.media}
+      contentFit="contain"
+      nativeControls
+    />
+  )
+}
+
+const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean }> = ({
   fileId, fileKey, visible,
 }) => {
   const [state, setState] = useState<FileState>({ file: null, uri: null, loading: true, error: false })
@@ -37,7 +58,7 @@ const FileViewer: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boole
     if (!visible) return
     let cancelled = false
     const load = async () => {
-      setState(s => ({ ...s, loading: true }))
+      setState(s => ({ ...s, loading: true, error: false }))
       try {
         const file = await getFile(fileId)
         if (!file || cancelled) return
@@ -70,33 +91,28 @@ const FileViewer: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boole
 
   const kind = getMediaKind(state.file.mimeType)
 
+  if (kind === 'video') {
+    return (
+      <View style={styles.slide}>
+        <VideoSlide uri={state.uri} visible={visible} />
+      </View>
+    )
+  }
+
+  if (kind === 'image' || kind === 'gif') {
+    return (
+      <View style={styles.slide}>
+        <Image source={{ uri: state.uri }} style={styles.media} contentFit="contain" />
+      </View>
+    )
+  }
+
   return (
     <View style={styles.slide}>
-      {(kind === 'image' || kind === 'gif') && (
-        <Image
-          source={{ uri: state.uri }}
-          style={styles.media}
-          contentFit="contain"
-        />
-      )}
-      {kind === 'video' && (
-        <Video
-          source={{ uri: state.uri }}
-          style={styles.media}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={visible}
-          isLooping
-          useNativeControls
-        />
-      )}
-      {kind === 'unknown' && (
-        <View style={[styles.slide, { gap: 12 }]}>
-          <Text style={{ fontSize: 48 }}>📄</Text>
-          <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '600' }}>
-            {state.file.originalName}
-          </Text>
-        </View>
-      )}
+      <Text style={{ fontSize: 48 }}>📄</Text>
+      <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
+        {state.file.originalName}
+      </Text>
     </View>
   )
 }
@@ -105,7 +121,6 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
   const [currentFile, setCurrentFile] = useState<VaultFile | null>(null)
-  const listRef = useRef<FlatList>(null)
 
   useEffect(() => {
     getFile(fileIds[currentIndex]).then(setCurrentFile)
@@ -115,7 +130,6 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
     <View style={styles.container}>
       <StatusBar hidden />
       <FlatList
-        ref={listRef}
         data={fileIds}
         keyExtractor={id => id}
         horizontal
@@ -124,11 +138,10 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
         initialScrollIndex={initialIndex}
         getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
         onMomentumScrollEnd={e => {
-          const idx = Math.round(e.nativeEvent.contentOffset.x / width)
-          setCurrentIndex(idx)
+          setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / width))
         }}
         renderItem={({ item, index }) => (
-          <FileViewer
+          <FileSlide
             fileId={item}
             fileKey={fileKey}
             visible={Math.abs(index - currentIndex) <= 1}
@@ -165,11 +178,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  slide: {
-    width, height,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#000',
-  },
+  slide: { width, height, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
   media: { width, height },
   topBar: {
     position: 'absolute', top: 0, left: 0, right: 0,

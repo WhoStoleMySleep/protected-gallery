@@ -1,11 +1,12 @@
 import { gcm } from '@noble/ciphers/aes.js'
+import { getRandomValues } from 'expo-crypto'
 import { bytesToBase64, base64ToBytes } from '../utils/encoding'
 
 const IV_SIZE = 12
 
 export const encryptBytes = (data: Uint8Array, key: Uint8Array): Uint8Array => {
   const iv = new Uint8Array(IV_SIZE)
-  crypto.getRandomValues(iv)
+  getRandomValues(iv)
   const cipher = gcm(key, iv)
   const ciphertext = cipher.encrypt(data)
   const result = new Uint8Array(IV_SIZE + ciphertext.length)
