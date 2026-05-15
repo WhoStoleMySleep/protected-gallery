@@ -68,3 +68,14 @@ export const getDailyEnabled = async (): Promise<boolean> => {
 export const setDailyEnabled = async (enabled: boolean): Promise<void> => {
   await AsyncStorage.setItem(DAILY_ENABLED_KEY, String(enabled))
 }
+
+const SECURE_FLAG_KEY = 'vault:settings:secureFlag'
+
+export const getSecureFlagEnabled = async (): Promise<boolean> => {
+  const raw = await AsyncStorage.getItem(SECURE_FLAG_KEY)
+  return raw !== 'false'  // default: true
+}
+
+export const setSecureFlagEnabled = async (enabled: boolean): Promise<void> => {
+  await AsyncStorage.setItem(SECURE_FLAG_KEY, String(enabled))
+}

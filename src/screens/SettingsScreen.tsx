@@ -7,7 +7,8 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled, getDailyEnabled, setDailyEnabled } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled, getDailyEnabled, setDailyEnabled, getSecureFlagEnabled, setSecureFlagEnabled } from '../storage/settings'
+import { applySecureFlag } from '../native/secureFlag'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
@@ -35,6 +36,7 @@ interface Props {
   onPanicShakeChange?: (enabled: boolean) => void
   onBiometricsChange?: (enabled: boolean) => void
   onDailyEnabledChange?: (enabled: boolean) => void
+  onSecureFlagChange?: (enabled: boolean) => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -76,7 +78,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   themeBtnActive: { backgroundColor: c.accent },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange, onSecureFlagChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
@@ -87,6 +89,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   const [deviceHasBiometrics, setDeviceHasBiometrics] = useState(false)
   const [biometricsOn, setBiometricsOn] = useState(false)
   const [dailyOn, setDailyOn] = useState(false)
+  const [secureFlagOn, setSecureFlagOn] = useState(true)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
@@ -94,6 +97,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     getPanicShakeEnabled().then(setPanicShakeState)
     getBiometricsEnabled().then(setBiometricsOn)
     getDailyEnabled().then(setDailyOn)
+    getSecureFlagEnabled().then(setSecureFlagOn)
     LocalAuthentication.hasHardwareAsync().then(async (hw) => {
       if (!hw) return
       const enrolled = await LocalAuthentication.isEnrolledAsync()
@@ -117,6 +121,13 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     setDailyOn(val)
     await setDailyEnabled(val)
     onDailyEnabledChange?.(val)
+  }
+
+  const changeSecureFlag = async (val: boolean) => {
+    setSecureFlagOn(val)
+    await setSecureFlagEnabled(val)
+    applySecureFlag(val)
+    onSecureFlagChange?.(val)
   }
 
   const changeAutoLock = async (t: AutoLockTimeout) => {
@@ -318,6 +329,21 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               />
             </View>
           )}
+          <View style={styles.row}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="eye-off-outline" size={20} color={colors.subtext} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Блокировка скриншотов</Text>
+              <Text style={styles.rowDesc}>Запрещает снимки экрана и превью в переключателе задач</Text>
+            </View>
+            <Switch
+              value={secureFlagOn}
+              onValueChange={changeSecureFlag}
+              trackColor={{ false: colors.border, true: colors.accentDim }}
+              thumbColor={secureFlagOn ? colors.accent : colors.subtext}
+            />
+          </View>
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="alert-circle-outline" size={20} color={colors.subtext} />

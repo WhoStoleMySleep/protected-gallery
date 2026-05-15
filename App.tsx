@@ -9,7 +9,8 @@ import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore, saveFile } from './src/storage/metadata'
 import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
-import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled } from './src/storage/settings'
+import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled, getSecureFlagEnabled } from './src/storage/settings'
+import { applySecureFlag } from './src/native/secureFlag'
 import { Accelerometer } from 'expo-sensors'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
@@ -58,6 +59,7 @@ function AppContent() {
     getPanicShakeEnabled().then(setPanicShakeEnabled)
     getBiometricsEnabled().then(setBiometricsEnabledState)
     getDailyEnabled().then(setDailyEnabledState)
+    getSecureFlagEnabled().then(enabled => { if (!enabled) applySecureFlag(false) })
   }, [])
 
   // Shake-to-lock
