@@ -40,8 +40,8 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
   slide: { width, height, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
   media: { width, height },
+  barsWrapper: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'box-none' },
   topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: 12,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -58,7 +58,6 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   infoName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
   infoMeta: { color: c.subtextLight, fontSize: 13 },
   actionBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
     paddingVertical: 12, paddingHorizontal: 16,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -95,7 +94,9 @@ const FileSlide: React.FC<{
   visible: boolean
   priority: 'high' | 'normal'
   onScaleChange?: (s: number) => void
-}> = ({ fileId, fileKey, visible, priority, onScaleChange }) => {
+  onSingleTap?: () => void
+  barsVisible?: boolean
+}> = ({ fileId, fileKey, visible, priority, onScaleChange, onSingleTap, barsVisible }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
@@ -144,6 +145,9 @@ const FileSlide: React.FC<{
     return (
       <View style={styles.slide}>
         <VideoSlide uri={state.uri} visible={visible} />
+        {!barsVisible && onSingleTap && (
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onSingleTap} activeOpacity={1} />
+        )}
       </View>
     )
   }
@@ -151,18 +155,18 @@ const FileSlide: React.FC<{
   if (kind === 'image' || kind === 'gif') {
     return (
       <View style={styles.slide}>
-        <ZoomableImage uri={state.uri} onScaleChange={onScaleChange} />
+        <ZoomableImage uri={state.uri} onScaleChange={onScaleChange} onSingleTap={onSingleTap} />
       </View>
     )
   }
 
   return (
-    <View style={styles.slide}>
+    <TouchableOpacity style={styles.slide} onPress={onSingleTap} activeOpacity={1}>
       <Ionicons name="document-outline" size={48} color={colors.subtext} />
       <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
         {state.file.originalName}
       </Text>
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -179,6 +183,10 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
   const flatListRef = useRef<FlatList>(null)
   const translateY = useRef(new Animated.Value(0)).current
   const imageScaleRef = useRef(1)
+  const barsOpacity = useRef(new Animated.Value(1)).current
+  const [barsVisible, setBarsVisible] = useState(true)
+  const barsVisibleRef = useRef(true)
+  const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const borderRadius = translateY.interpolate({
     inputRange: [0, DISMISS_THRESHOLD],
@@ -191,6 +199,26 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
     outputRange: [1, 0.88],
     extrapolate: 'clamp',
   })
+
+  const hideBars = () => {
+    if (autoHideTimer.current) { clearTimeout(autoHideTimer.current); autoHideTimer.current = null }
+    barsVisibleRef.current = false
+    setBarsVisible(false)
+    Animated.timing(barsOpacity, { toValue: 0, duration: 250, useNativeDriver: true }).start()
+  }
+
+  const showBars = () => {
+    barsVisibleRef.current = true
+    setBarsVisible(true)
+    Animated.timing(barsOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start()
+    if (autoHideTimer.current) clearTimeout(autoHideTimer.current)
+    autoHideTimer.current = setTimeout(hideBars, 3000)
+  }
+
+  const toggleBars = () => {
+    if (barsVisibleRef.current) hideBars()
+    else showBars()
+  }
 
   const dismiss = (velocity = 0) => {
     const duration = velocity > 0 ? Math.max(100, Math.min(250, 200 / velocity)) : 220
@@ -229,6 +257,11 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
   })).current
 
   useEffect(() => {
+    autoHideTimer.current = setTimeout(hideBars, 2500)
+    return () => { if (autoHideTimer.current) clearTimeout(autoHideTimer.current) }
+  }, [])
+
+  useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       dismiss()
       return true
@@ -261,6 +294,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
 
   const handleTrash = () => {
     if (!currentFile) return
+    showBars()
     Alert.alert(
       'Удалить файл?',
       'Файл будет перемещён в корзину.',
@@ -280,6 +314,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
 
   const handleArchive = async () => {
     if (!currentFile) return
+    showBars()
     const isArchived = currentFile.status === 'archived'
     await updateFileMeta(currentFile.id, { status: isArchived ? 'active' : 'archived' })
     if (!isArchived) {
@@ -292,6 +327,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
 
   const handleShare = async () => {
     if (!currentFile) return
+    showBars()
     try {
       const uri = await decryptToTemp(currentFile.encryptedPath, fileKey, currentFile.mimeType, currentFile.id)
       await Sharing.shareAsync(uri, { mimeType: currentFile.mimeType, dialogTitle: currentFile.originalName })
@@ -328,22 +364,29 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
             visible={Math.abs(index - currentIndex) <= 1}
             priority={index === currentIndex ? 'high' : 'normal'}
             onScaleChange={index === currentIndex ? handleScaleChange : undefined}
+            onSingleTap={toggleBars}
+            barsVisible={barsVisible}
           />
         )}
       />
 
-      <SafeAreaView edges={['top']} style={styles.topBar}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => dismiss()}>
-          <Text style={styles.closeTxt}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.counter}>{currentIndex + 1} / {localFileIds.length}</Text>
-        <TouchableOpacity style={styles.infoBtn} onPress={() => setShowInfo(s => !s)}>
-          <Ionicons name={showInfo ? 'information-circle' : 'information-circle-outline'} size={22} color="#fff" />
-        </TouchableOpacity>
-      </SafeAreaView>
+      <Animated.View
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, opacity: barsOpacity }}
+        pointerEvents={barsVisible ? 'auto' : 'none'}
+      >
+        <SafeAreaView edges={['top']} style={styles.topBar}>
+          <TouchableOpacity style={styles.closeBtn} onPress={() => dismiss()}>
+            <Text style={styles.closeTxt}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.counter}>{currentIndex + 1} / {localFileIds.length}</Text>
+          <TouchableOpacity style={styles.infoBtn} onPress={() => { showBars(); setShowInfo(s => !s) }}>
+            <Ionicons name={showInfo ? 'information-circle' : 'information-circle-outline'} size={22} color="#fff" />
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Animated.View>
 
       {showInfo && currentFile && (
-        <View style={styles.infoOverlay}>
+        <Animated.View style={[styles.infoOverlay, { opacity: barsOpacity }]} pointerEvents={barsVisible ? 'auto' : 'none'}>
           <Text style={styles.infoName} numberOfLines={2}>{currentFile.originalName}</Text>
           <Text style={styles.infoMeta}>{formatFileSize(currentFile.size)}</Text>
           <Text style={styles.infoMeta}>{formatDate(currentFile.importedAt)}</Text>
@@ -353,23 +396,28 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
           {currentFile.width != null && (
             <Text style={styles.infoMeta}>{currentFile.width} × {currentFile.height}</Text>
           )}
-        </View>
+        </Animated.View>
       )}
 
-      <SafeAreaView edges={['bottom']} style={styles.actionBar}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
-          <Ionicons name="share-outline" size={24} color="#fff" />
-          <Text style={styles.actionLabel}>Поделиться</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleArchive}>
-          <Ionicons name={isArchived ? 'archive' : 'archive-outline'} size={24} color="#fff" />
-          <Text style={styles.actionLabel}>{isArchived ? 'Убрать' : 'Архив'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleTrash}>
-          <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
-          <Text style={styles.actionLabelDanger}>Удалить</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <Animated.View
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, opacity: barsOpacity }}
+        pointerEvents={barsVisible ? 'auto' : 'none'}
+      >
+        <SafeAreaView edges={['bottom']} style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+            <Ionicons name="share-outline" size={24} color="#fff" />
+            <Text style={styles.actionLabel}>Поделиться</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleArchive}>
+            <Ionicons name={isArchived ? 'archive' : 'archive-outline'} size={24} color="#fff" />
+            <Text style={styles.actionLabel}>{isArchived ? 'Убрать' : 'Архив'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleTrash}>
+            <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
+            <Text style={styles.actionLabelDanger}>Удалить</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Animated.View>
     </Animated.View>
   )
 }

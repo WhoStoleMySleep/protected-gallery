@@ -7,9 +7,10 @@ const { width, height } = Dimensions.get('window')
 interface Props {
   uri: string
   onScaleChange?: (scale: number) => void
+  onSingleTap?: () => void
 }
 
-export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
+export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange, onSingleTap }) => {
   const scale = useRef(new Animated.Value(1)).current
   const translateX = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(0)).current
@@ -28,6 +29,7 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
   const initMidY = useRef(0)
 
   const lastTap = useRef(0)
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const maxTrans = (sc: number) => ({
     x: Math.max(0, (width * sc - width) / 2),
@@ -166,12 +168,19 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
   const handleDoubleTap = () => {
     const now = Date.now()
     if (now - lastTap.current < 280) {
+      if (singleTapTimer.current) { clearTimeout(singleTapTimer.current); singleTapTimer.current = null }
       if (s.current > 1.1) {
         resetZoom()
       } else {
         applyTransform(2.5, 0, 0)
         Animated.spring(scale, { toValue: 2.5, useNativeDriver: true, tension: 130, friction: 9 }).start()
       }
+    } else {
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current)
+      singleTapTimer.current = setTimeout(() => {
+        singleTapTimer.current = null
+        onSingleTap?.()
+      }, 280)
     }
     lastTap.current = now
   }
