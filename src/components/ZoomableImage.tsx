@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react'
-import { Animated, PanResponder, TouchableOpacity, Dimensions } from 'react-native'
+import React, { useRef } from 'react'
+import { Animated, PanResponder, View, Dimensions } from 'react-native'
 import { Image } from 'expo-image'
 
 const { width, height } = Dimensions.get('window')
@@ -11,68 +11,144 @@ interface Props {
 
 export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
   const scale = useRef(new Animated.Value(1)).current
-  const currentScale = useRef(1)
-  const lastScale = useRef(1)
-  const initialDist = useRef<number | null>(null)
+  const translateX = useRef(new Animated.Value(0)).current
+  const translateY = useRef(new Animated.Value(0)).current
+
+  // Live values tracked via listeners
+  const s = useRef(1)
+  const tx = useRef(0)
+  const ty = useRef(0)
+
+  // Values at gesture start
+  const baseScale = useRef(1)
+  const baseTx = useRef(0)
+  const baseTy = useRef(0)
+
+  // Pinch tracking
+  const initDist = useRef<number | null>(null)
+  const initMidX = useRef(0)
+  const initMidY = useRef(0)
+
+  // Double-tap
   const lastTap = useRef(0)
 
-  useEffect(() => {
-    const id = (scale as any).addListener(({ value }: { value: number }) => {
-      currentScale.current = value
-      onScaleChange?.(value)
-    })
-    return () => (scale as any).removeListener(id)
+  // Sync animated values → refs
+  React.useEffect(() => {
+    const ids = [
+      (scale as any).addListener(({ value }: { value: number }) => { s.current = value; onScaleChange?.(value) }),
+      (translateX as any).addListener(({ value }: { value: number }) => { tx.current = value }),
+      (translateY as any).addListener(({ value }: { value: number }) => { ty.current = value }),
+    ]
+    return () => ids.forEach((id, i) => [scale, translateX, translateY][i].removeListener(id) as any)
   }, [onScaleChange])
 
+  const maxTrans = (sc: number) => ({
+    x: Math.max(0, (width * sc - width) / 2),
+    y: Math.max(0, (height * sc - height) / 2),
+  })
+
+  const clampedTrans = (newTx: number, newTy: number, sc: number) => {
+    const m = maxTrans(sc)
+    return {
+      x: Math.max(-m.x, Math.min(m.x, newTx)),
+      y: Math.max(-m.y, Math.min(m.y, newTy)),
+    }
+  }
+
   const resetZoom = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }).start()
-    lastScale.current = 1
-    currentScale.current = 1
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
+      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }),
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }),
+    ]).start()
+    s.current = 1; tx.current = 0; ty.current = 0
     onScaleChange?.(1)
   }
 
   const panResponder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: (e) => e.nativeEvent.touches.length === 2,
-    onMoveShouldSetPanResponder: (e) => e.nativeEvent.touches.length === 2,
+    // Claim immediately if zoomed (single finger) or always for 2 fingers
+    onStartShouldSetPanResponder: (e) =>
+      e.nativeEvent.touches.length === 2 || s.current > 1.05,
+    onMoveShouldSetPanResponder: (e) =>
+      e.nativeEvent.touches.length === 2 || s.current > 1.05,
+
     onPanResponderGrant: (e) => {
-      if (e.nativeEvent.touches.length !== 2) return
-      const [t1, t2] = e.nativeEvent.touches
-      const dx = t1.pageX - t2.pageX
-      const dy = t1.pageY - t2.pageY
-      initialDist.current = Math.sqrt(dx * dx + dy * dy)
-      lastScale.current = currentScale.current
-    },
-    onPanResponderMove: (e) => {
-      if (e.nativeEvent.touches.length !== 2 || initialDist.current === null) return
-      const [t1, t2] = e.nativeEvent.touches
-      const dx = t1.pageX - t2.pageX
-      const dy = t1.pageY - t2.pageY
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const newScale = Math.max(1, Math.min(5, lastScale.current * dist / initialDist.current))
-      scale.setValue(newScale)
-    },
-    onPanResponderRelease: () => {
-      initialDist.current = null
-      if (currentScale.current < 1.15) {
-        resetZoom()
+      const touches = e.nativeEvent.touches
+      baseScale.current = s.current
+      baseTx.current = tx.current
+      baseTy.current = ty.current
+
+      if (touches.length === 2) {
+        const dx = touches[0].pageX - touches[1].pageX
+        const dy = touches[0].pageY - touches[1].pageY
+        initDist.current = Math.sqrt(dx * dx + dy * dy)
+        initMidX.current = (touches[0].pageX + touches[1].pageX) / 2
+        initMidY.current = (touches[0].pageY + touches[1].pageY) / 2
       } else {
-        lastScale.current = currentScale.current
+        initDist.current = null
       }
     },
+
+    onPanResponderMove: (e, g) => {
+      const touches = e.nativeEvent.touches
+
+      if (touches.length >= 2 && initDist.current !== null) {
+        // ── Pinch ──
+        const dx = touches[0].pageX - touches[1].pageX
+        const dy = touches[0].pageY - touches[1].pageY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const ratio = dist / initDist.current
+        const newScale = Math.max(1, Math.min(6, baseScale.current * ratio))
+
+        // Scale around pinch midpoint
+        // tx2 = (midX - w/2) * (1 - newScale/baseScale) + baseTx * newScale/baseScale
+        const scaleRatio = newScale / baseScale.current
+        const newTx = (initMidX.current - width / 2) * (1 - scaleRatio) + baseTx.current * scaleRatio
+        const newTy = (initMidY.current - height / 2) * (1 - scaleRatio) + baseTy.current * scaleRatio
+        const clamped = clampedTrans(newTx, newTy, newScale)
+
+        scale.setValue(newScale)
+        translateX.setValue(clamped.x)
+        translateY.setValue(clamped.y)
+      } else if (touches.length === 1 && s.current > 1.05) {
+        // ── Pan while zoomed ──
+        const newTx = baseTx.current + g.dx
+        const newTy = baseTy.current + g.dy
+        const clamped = clampedTrans(newTx, newTy, s.current)
+        translateX.setValue(clamped.x)
+        translateY.setValue(clamped.y)
+      }
+    },
+
+    onPanResponderRelease: (e) => {
+      initDist.current = null
+      if (s.current < 1.15) {
+        resetZoom()
+      } else {
+        // Snap translate to clamped bounds
+        const clamped = clampedTrans(tx.current, ty.current, s.current)
+        if (Math.abs(clamped.x - tx.current) > 0.5 || Math.abs(clamped.y - ty.current) > 0.5) {
+          Animated.parallel([
+            Animated.spring(translateX, { toValue: clamped.x, useNativeDriver: true }),
+            Animated.spring(translateY, { toValue: clamped.y, useNativeDriver: true }),
+          ]).start()
+        }
+      }
+    },
+
     onPanResponderTerminate: () => {
-      initialDist.current = null
-      if (currentScale.current < 1.15) resetZoom()
+      initDist.current = null
+      if (s.current < 1.15) resetZoom()
     },
   })).current
 
-  const handleTap = () => {
+  const handlePress = () => {
     const now = Date.now()
     if (now - lastTap.current < 280) {
-      if (currentScale.current > 1.1) {
+      if (s.current > 1.1) {
         resetZoom()
       } else {
         Animated.spring(scale, { toValue: 2.5, useNativeDriver: true, tension: 120, friction: 8 }).start()
-        lastScale.current = 2.5
         onScaleChange?.(2.5)
       }
     }
@@ -80,14 +156,17 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
   }
 
   return (
-    <TouchableOpacity activeOpacity={1} onPress={handleTap} {...panResponder.panHandlers}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <Image
-          source={{ uri }}
-          style={{ width, height }}
-          contentFit="contain"
-        />
+    <View
+      style={{ width, height }}
+      onStartShouldSetResponder={() => false}
+      {...panResponder.panHandlers}
+    >
+      <Animated.View
+        style={{ transform: [{ translateX }, { translateY }, { scale }] }}
+        onTouchEnd={handlePress}
+      >
+        <Image source={{ uri }} style={{ width, height }} contentFit="contain" />
       </Animated.View>
-    </TouchableOpacity>
+    </View>
   )
 }

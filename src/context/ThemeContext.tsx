@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { useColorScheme } from 'react-native'
+import { Appearance } from 'react-native'
 import { Colors, DARK_COLORS, LIGHT_COLORS } from '../theme'
 import { ThemeMode, getThemeMode, setThemeMode } from '../storage/settings'
 
@@ -18,11 +18,13 @@ const ThemeContext = createContext<ThemeContextValue>({
 export const useTheme = () => useContext(ThemeContext)
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const systemScheme = useColorScheme()
+  const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme())
   const [mode, setModeState] = useState<ThemeMode>('system')
 
   useEffect(() => {
     getThemeMode().then(setModeState)
+    const sub = Appearance.addChangeListener(({ colorScheme }) => setSystemScheme(colorScheme))
+    return () => sub.remove()
   }, [])
 
   const resolvedDark = mode === 'system' ? systemScheme === 'dark' : mode === 'dark'

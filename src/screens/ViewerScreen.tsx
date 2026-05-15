@@ -314,6 +314,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
         keyExtractor={id => id}
         horizontal
         pagingEnabled
+        scrollEnabled={imageScale <= 1.05}
         showsHorizontalScrollIndicator={false}
         initialScrollIndex={initialIndex}
         getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
