@@ -7,6 +7,7 @@ import { checkPinMode } from '../crypto/pin'
 import type { VaultMode } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   onUnlock: (mode: VaultMode) => void
@@ -44,9 +45,7 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
       } else {
         const next = attempts + 1
         setAttempts(next)
-        setError(next >= 5
-          ? `Неверный PIN (${next} попыток). Попробуйте снова.`
-          : 'Неверный PIN. Попробуйте снова.')
+        setError(next >= 5 ? s.pin.wrongAttempts(next) : s.pin.wrong)
       }
     } finally {
       setLoading(false)
@@ -55,9 +54,9 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
 
   const handleBiometrics = async () => {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Разблокируйте сейф',
-      cancelLabel: 'Отмена',
-      fallbackLabel: 'Ввести PIN',
+      promptMessage: s.pin.bioPrompt,
+      cancelLabel: s.pin.bioCancel,
+      fallbackLabel: s.pin.bioFallback,
     })
     if (result.success) onUnlock('real')
   }
@@ -65,9 +64,10 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
   return (
     <SafeAreaView style={styles.container}>
       <PinPad
-        title="Введите PIN-код"
+        title={s.pin.enter}
         onComplete={handlePin}
         error={error}
+        confirmLabel={s.pin.unlock}
       />
 
       {biometricsAvailable && (

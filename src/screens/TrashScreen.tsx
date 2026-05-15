@@ -13,6 +13,7 @@ import { permanentlyDeleteFiles } from '../storage/vault'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -83,12 +84,12 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
   const deletePermanently = () => {
     const count = selected.size
     Alert.alert(
-      'Удалить навсегда?',
-      `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'} будут безвозвратно удалены.`,
+      s.trash.deleteTitle,
+      s.trash.deleteMsg(count),
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: s.trash.cancel, style: 'cancel' },
         {
-          text: 'Удалить',
+          text: s.trash.deleteBtn,
           style: 'destructive',
           onPress: async () => {
             await permanentlyDeleteFiles(files.filter(f => selected.has(f.id)))
@@ -103,12 +104,12 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
   const clearAll = () => {
     if (files.length === 0) return
     Alert.alert(
-      'Очистить корзину?',
-      `Все ${files.length} файлов будут безвозвратно удалены.`,
+      s.trash.clearTitle,
+      s.trash.clearMsg(files.length),
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: s.trash.cancel, style: 'cancel' },
         {
-          text: 'Очистить',
+          text: s.trash.clearConfirm,
           style: 'destructive',
           onPress: async () => {
             await permanentlyDeleteFiles(files)
@@ -126,17 +127,17 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Text style={styles.backTxt}>‹ Назад</Text>
+          <Text style={styles.backTxt}>{s.trash.back}</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.title}>Корзина</Text>
+          <Text style={styles.title}>{s.trash.title}</Text>
           {!loading && files.length > 0 && (
-            <Text style={styles.subtitle}>Автоочистка через 30 дней</Text>
+            <Text style={styles.subtitle}>{s.trash.autoPurge}</Text>
           )}
         </View>
         {!loading && files.length > 0 ? (
           <TouchableOpacity onPress={clearAll} style={styles.backBtn}>
-            <Text style={[styles.backTxt, { color: colors.danger, textAlign: 'right' }]}>Очистить</Text>
+            <Text style={[styles.backTxt, { color: colors.danger, textAlign: 'right' }]}>{s.trash.clearBtn}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
@@ -148,7 +149,7 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
       ) : files.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="trash-outline" size={48} color={colors.subtext} style={styles.emptyIcon} />
-          <Text style={styles.emptyText}>Корзина пуста</Text>
+          <Text style={styles.emptyText}>{s.trash.empty}</Text>
         </View>
       ) : (
         <FlatList
@@ -178,8 +179,8 @@ export const TrashScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) 
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Восстановить', onPress: restore },
-            { label: 'Удалить', danger: true, onPress: deletePermanently },
+            { label: s.selection.restore, onPress: restore },
+            { label: s.selection.delete, danger: true, onPress: deletePermanently },
           ]}
         />
       )}

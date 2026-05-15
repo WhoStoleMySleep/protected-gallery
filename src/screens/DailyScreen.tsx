@@ -14,6 +14,7 @@ import { formatDate } from '../utils/media'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -113,7 +114,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     return (
       <View style={styles.center}>
         <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
-          Ошибка загрузки:{'\n'}{loadError}
+          {s.daily.loadError}{'\n'}{loadError}
         </Text>
       </View>
     )
@@ -124,18 +125,18 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Сегодня</Text>
+        <Text style={styles.title}>{s.daily.title}</Text>
         <Text style={styles.date}>{formatDate(Date.now())}</Text>
         <Text style={styles.count}>
-          {files.length === 0 ? 'Сейф пуст' : `Файлов сегодня: ${files.length}`}
+          {files.length === 0 ? s.daily.vaultEmpty : s.daily.count(files.length)}
         </Text>
       </View>
 
       {files.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyText}>Ваш сейф пуст</Text>
-          <Text style={styles.emptyHint}>Перейдите на вкладку «Импорт», чтобы добавить медиафайлы</Text>
+          <Text style={styles.emptyText}>{s.daily.emptyText}</Text>
+          <Text style={styles.emptyHint}>{s.daily.emptyHint}</Text>
         </View>
       ) : (
         <FlatList
@@ -165,8 +166,8 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Архив', onPress: archiveSelected },
-            { label: 'Корзина', danger: true, onPress: trashSelected },
+            { label: s.selection.archive, onPress: archiveSelected },
+            { label: s.selection.trash, danger: true, onPress: trashSelected },
           ]}
         />
       )}

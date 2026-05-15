@@ -45,5 +45,5 @@ export const formatDuration = (ms: number): string => {
 
 export const formatDate = (timestamp: number): string => {
   const d = new Date(timestamp)
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
 }

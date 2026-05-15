@@ -7,6 +7,7 @@ import { setupSafePin, safePinExists, deleteSafePin } from '../crypto/pin'
 import { generateAndStoreSafeKey, deleteSafeKey } from '../crypto/keys'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   onComplete: () => void
@@ -82,12 +83,12 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
 
   const disable = () => {
     Alert.alert(
-      'Отключить безопасный режим?',
-      'Все файлы в безопасном хранилище будут безвозвратно удалены.',
+      s.safeMode.disableTitle,
+      s.safeMode.disableMsg,
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: s.safeMode.disableCancel, style: 'cancel' },
         {
-          text: 'Отключить',
+          text: s.safeMode.disableConfirm,
           style: 'destructive',
           onPress: async () => {
             setSaving(true)
@@ -117,12 +118,12 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setStep('status')}>
-            <Text style={styles.cancel}>Отмена</Text>
+            <Text style={styles.cancel}>{s.safeMode.cancel}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Безопасный режим</Text>
+          <Text style={styles.title}>{s.safeMode.title}</Text>
           <View style={{ width: 64 }} />
         </View>
-        <PinPad title="Новый PIN" onComplete={handleNewPin} />
+        <PinPad title={s.safeMode.newPin} onComplete={handleNewPin} />
       </SafeAreaView>
     )
   }
@@ -132,24 +133,23 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setNewPin(''); setStep('newPin') }}>
-            <Text style={styles.cancel}>Назад</Text>
+            <Text style={styles.cancel}>{s.safeMode.back}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Безопасный режим</Text>
+          <Text style={styles.title}>{s.safeMode.title}</Text>
           <View style={{ width: 64 }} />
         </View>
-        <PinPad title="Повторите PIN" onComplete={handleConfirm} />
+        <PinPad title={s.safeMode.confirmPin} onComplete={handleConfirm} />
       </SafeAreaView>
     )
   }
 
-  // step === 'status'
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.cancel}>Отмена</Text>
+          <Text style={styles.cancel}>{s.safeMode.cancel}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Безопасный режим</Text>
+        <Text style={styles.title}>{s.safeMode.title}</Text>
         <View style={{ width: 64 }} />
       </View>
 
@@ -158,26 +158,21 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
 
         {!isConfigured ? (
           <>
-            <Text style={styles.heading}>Не настроен</Text>
-            <Text style={styles.desc}>
-              Создайте отдельное хранилище с независимым PIN-кодом. При входе с этим кодом откроется безопасное хранилище — для отвлечения внимания.{'\n\n'}
-              Смена PIN-кода и настройки безопасного режима в нём недоступны.
-            </Text>
+            <Text style={styles.heading}>{s.safeMode.notConfigured}</Text>
+            <Text style={styles.desc}>{s.safeMode.descSetup}</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('newPin')}>
-              <Text style={styles.primaryBtnTxt}>Настроить</Text>
+              <Text style={styles.primaryBtnTxt}>{s.safeMode.configure}</Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <Text style={styles.heading}>Активен</Text>
-            <Text style={styles.desc}>
-              Безопасное хранилище настроено. При входе с PIN-кодом безопасного режима откроется независимое хранилище.
-            </Text>
+            <Text style={styles.heading}>{s.safeMode.active}</Text>
+            <Text style={styles.desc}>{s.safeMode.descActive}</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('newPin')}>
-              <Text style={styles.primaryBtnTxt}>Сменить PIN</Text>
+              <Text style={styles.primaryBtnTxt}>{s.safeMode.changePin}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.dangerBtn} onPress={disable}>
-              <Text style={styles.dangerBtnTxt}>Отключить</Text>
+              <Text style={styles.dangerBtnTxt}>{s.safeMode.disable}</Text>
             </TouchableOpacity>
           </>
         )}

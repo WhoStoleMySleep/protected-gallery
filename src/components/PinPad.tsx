@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   title: string
@@ -17,6 +18,7 @@ interface Props {
   maxLength?: number
   minLength?: number
   error?: string | null
+  confirmLabel?: string
 }
 
 const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫']
@@ -53,6 +55,7 @@ export const PinPad: React.FC<Props> = ({
   maxLength = 16,
   minLength = 4,
   error,
+  confirmLabel,
 }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
@@ -125,7 +128,7 @@ export const PinPad: React.FC<Props> = ({
         activeOpacity={pin.length >= minLength ? 0.7 : 1}
       >
         <Text style={[styles.confirmText, pin.length < minLength && styles.confirmTextInactive]}>
-          Подтвердить
+          {confirmLabel ?? s.pin.confirm}
         </Text>
       </TouchableOpacity>
     </View>

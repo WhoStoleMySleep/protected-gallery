@@ -7,21 +7,15 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled, getDailyEnabled, setDailyEnabled, getSecureFlagEnabled, setSecureFlagEnabled } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled, getDailyEnabled, setDailyEnabled, getSecureFlagEnabled, setSecureFlagEnabled, getLanguageOverride, setLanguageOverride } from '../storage/settings'
 import { applySecureFlag } from '../native/secureFlag'
+import { s, applyLang, lang, Lang } from '../i18n'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 
 const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
-const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
-  { value: 0, label: 'Нет' },
-  { value: 1, label: '1 мин' },
-  { value: 2, label: '2 мин' },
-  { value: 5, label: '5 мин' },
-  { value: 10, label: '10 мин' },
-  { value: 30, label: '30 мин' },
-]
+const AUTO_LOCK_VALUES: AutoLockTimeout[] = [0, 1, 2, 5, 10, 30]
 
 interface Props {
   onLock: () => void
@@ -37,6 +31,7 @@ interface Props {
   onBiometricsChange?: (enabled: boolean) => void
   onDailyEnabledChange?: (enabled: boolean) => void
   onSecureFlagChange?: (enabled: boolean) => void
+  onLangChange?: () => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -76,9 +71,10 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   themeSelector: { flexDirection: 'row', gap: 6 },
   themeBtn: { padding: 8, borderRadius: 8, backgroundColor: c.cardAlt },
   themeBtnActive: { backgroundColor: c.accent },
+  langBtnTxt: { color: c.subtext, fontSize: 13, fontWeight: '700' },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange, onSecureFlagChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange, onSecureFlagChange, onLangChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
@@ -90,6 +86,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   const [biometricsOn, setBiometricsOn] = useState(false)
   const [dailyOn, setDailyOn] = useState(false)
   const [secureFlagOn, setSecureFlagOn] = useState(true)
+  const [currentLang, setCurrentLang] = useState<Lang>(lang)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
@@ -98,6 +95,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     getBiometricsEnabled().then(setBiometricsOn)
     getDailyEnabled().then(setDailyOn)
     getSecureFlagEnabled().then(setSecureFlagOn)
+    getLanguageOverride().then(l => { if (l) setCurrentLang(l) })
     LocalAuthentication.hasHardwareAsync().then(async (hw) => {
       if (!hw) return
       const enrolled = await LocalAuthentication.isEnrolledAsync()
@@ -121,6 +119,13 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     setDailyOn(val)
     await setDailyEnabled(val)
     onDailyEnabledChange?.(val)
+  }
+
+  const changeLang = async (l: Lang) => {
+    setCurrentLang(l)
+    await setLanguageOverride(l)
+    applyLang(l)
+    onLangChange?.()
   }
 
   const changeSecureFlag = async (val: boolean) => {
@@ -153,15 +158,11 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
 
   const confirmDeleteAll = () => {
     Alert.alert(
-      'Удалить всё?',
-      'Все зашифрованные файлы и метаданные будут безвозвратно удалены. Это действие невозможно отменить.',
+      s.settings.danger.deleteTitle,
+      s.settings.danger.deleteMsg,
       [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Удалить всё',
-          style: 'destructive',
-          onPress: deleteAll,
-        },
+        { text: s.settings.danger.deleteCancel, style: 'cancel' },
+        { text: s.settings.danger.deleteConfirm, style: 'destructive', onPress: deleteAll },
       ]
     )
   }
@@ -181,17 +182,14 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   }
 
   const showAbout = () => {
-    Alert.alert(
-      'О приложении',
-      'Личный зашифрованный медиасейф\n\nВерсия 1.0.0\n\nФайлы хранятся только локально на устройстве и зашифрованы алгоритмом AES-256-GCM.\n\nПриложение никогда не отправляет данные в интернет и не удаляет оригиналы из галереи.',
-    )
+    Alert.alert(s.settings.aboutTitle, s.settings.aboutMsg)
   }
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.accent} size="large" />
-        <Text style={{ color: colors.subtext, marginTop: 12 }}>Удаление данных...</Text>
+        <Text style={{ color: colors.subtext, marginTop: 12 }}>{s.settings.deleting}</Text>
       </View>
     )
   }
@@ -199,29 +197,31 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Настройки</Text>
+        <Text style={styles.title}>{s.settings.title}</Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ЕЖЕДНЕВНАЯ ПОДБОРКА</Text>
-          <View style={styles.row}>
+          <Text style={styles.sectionLabel}>{s.settings.sections.daily}</Text>
+          <TouchableOpacity style={styles.row} onPress={() => changeDaily(!dailyOn)} activeOpacity={0.7}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="shuffle-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Режим «Сегодня»</Text>
-              <Text style={styles.rowDesc}>Случайная подборка файлов каждый день. Если выключено — показывает все медиа.</Text>
+              <Text style={styles.rowTitle}>{s.settings.daily.modeTitle}</Text>
+              <Text style={styles.rowDesc}>{s.settings.daily.modeDesc}</Text>
             </View>
-            <Switch
-              value={dailyOn}
-              onValueChange={changeDaily}
-              trackColor={{ false: colors.border, true: colors.accentDim }}
-              thumbColor={dailyOn ? colors.accent : colors.subtext}
-            />
-          </View>
+            <View pointerEvents="none">
+              <Switch
+                value={dailyOn}
+                onValueChange={() => {}}
+                trackColor={{ false: colors.border, true: colors.accentDim }}
+                thumbColor={dailyOn ? colors.accent : colors.subtext}
+              />
+            </View>
+          </TouchableOpacity>
           <View style={[styles.row, styles.rowNoBorder, !dailyOn && styles.rowDisabled]}>
             <View style={styles.rowBody}>
-              <Text style={[styles.rowTitle, !dailyOn && { color: colors.subtext }]}>Файлов в день</Text>
-              <Text style={styles.rowDesc}>Сколько файлов показывать во вкладке «Сегодня»</Text>
+              <Text style={[styles.rowTitle, !dailyOn && { color: colors.subtext }]}>{s.settings.daily.limitTitle}</Text>
+              <Text style={styles.rowDesc}>{s.settings.daily.limitDesc}</Text>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.limitInput}
@@ -232,8 +232,9 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
                   placeholderTextColor={colors.subtext}
                   maxLength={4}
                   returnKeyType="done"
+                  editable={dailyOn}
                 />
-                <Text style={styles.limitInputLabel}>файлов/день</Text>
+                <Text style={styles.limitInputLabel}>{s.settings.daily.limitUnit}</Text>
               </View>
               <View style={styles.limitRow}>
                 {LIMIT_OPTIONS.map(opt => (
@@ -241,6 +242,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
                     key={opt}
                     style={[styles.limitBtn, dailyLimit === opt && styles.limitBtnActive]}
                     onPress={() => changeDailyLimit(opt)}
+                    disabled={!dailyOn}
                   >
                     <Text style={[styles.limitTxt, dailyLimit === opt && styles.limitTxtActive]}>
                       {opt}
@@ -253,14 +255,14 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>МЕДИАТЕКА</Text>
+          <Text style={styles.sectionLabel}>{s.settings.sections.media}</Text>
           <TouchableOpacity style={styles.row} onPress={onAllMedia}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="grid-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Все медиа</Text>
-              <Text style={styles.rowDesc}>Все активные файлы в сейфе</Text>
+              <Text style={styles.rowTitle}>{s.settings.media.allMedia}</Text>
+              <Text style={styles.rowDesc}>{s.settings.media.allMediaDesc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
@@ -269,8 +271,8 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="archive-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Архив</Text>
-              <Text style={styles.rowDesc}>Файлы не в подборке, хранятся бессрочно</Text>
+              <Text style={styles.rowTitle}>{s.settings.media.archive}</Text>
+              <Text style={styles.rowDesc}>{s.settings.media.archiveDesc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
@@ -279,23 +281,23 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="trash-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Корзина</Text>
-              <Text style={styles.rowDesc}>Автоочистка через 30 дней</Text>
+              <Text style={styles.rowTitle}>{s.settings.media.trash}</Text>
+              <Text style={styles.rowDesc}>{s.settings.media.trashDesc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>БЕЗОПАСНОСТЬ</Text>
+          <Text style={styles.sectionLabel}>{s.settings.sections.security}</Text>
           {vaultMode === 'real' && (
             <TouchableOpacity style={styles.row} onPress={onChangePin}>
               <View style={styles.rowIconWrap}>
                 <Ionicons name="key-outline" size={20} color={colors.subtext} />
               </View>
               <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>Сменить PIN-код</Text>
-                <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
+                <Text style={styles.rowTitle}>{s.settings.security.changePin}</Text>
+                <Text style={styles.rowDesc}>{s.settings.security.changePinDesc}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
@@ -306,74 +308,80 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
                 <Ionicons name="shield-half-outline" size={20} color={colors.subtext} />
               </View>
               <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>Безопасный режим</Text>
-                <Text style={styles.rowDesc}>Отдельное хранилище с другим PIN-кодом</Text>
+                <Text style={styles.rowTitle}>{s.settings.security.safeMode}</Text>
+                <Text style={styles.rowDesc}>{s.settings.security.safeModeDesc}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
           )}
           {deviceHasBiometrics && (
-            <View style={styles.row}>
+            <TouchableOpacity style={styles.row} onPress={() => changeBiometrics(!biometricsOn)} activeOpacity={0.7}>
               <View style={styles.rowIconWrap}>
                 <Ionicons name="finger-print-outline" size={20} color={colors.subtext} />
               </View>
               <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>Биометрия</Text>
-                <Text style={styles.rowDesc}>Разблокировка по отпечатку или лицу</Text>
+                <Text style={styles.rowTitle}>{s.settings.security.biometrics}</Text>
+                <Text style={styles.rowDesc}>{s.settings.security.biometricsDesc}</Text>
               </View>
-              <Switch
-                value={biometricsOn}
-                onValueChange={changeBiometrics}
-                trackColor={{ false: colors.border, true: colors.accentDim }}
-                thumbColor={biometricsOn ? colors.accent : colors.subtext}
-              />
-            </View>
+              <View pointerEvents="none">
+                <Switch
+                  value={biometricsOn}
+                  onValueChange={() => {}}
+                  trackColor={{ false: colors.border, true: colors.accentDim }}
+                  thumbColor={biometricsOn ? colors.accent : colors.subtext}
+                />
+              </View>
+            </TouchableOpacity>
           )}
-          <View style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => changeSecureFlag(!secureFlagOn)} activeOpacity={0.7}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="eye-off-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Блокировка скриншотов</Text>
-              <Text style={styles.rowDesc}>Запрещает снимки экрана и превью в переключателе задач</Text>
+              <Text style={styles.rowTitle}>{s.settings.security.secureScreen}</Text>
+              <Text style={styles.rowDesc}>{s.settings.security.secureScreenDesc}</Text>
             </View>
-            <Switch
-              value={secureFlagOn}
-              onValueChange={changeSecureFlag}
-              trackColor={{ false: colors.border, true: colors.accentDim }}
-              thumbColor={secureFlagOn ? colors.accent : colors.subtext}
-            />
-          </View>
-          <View style={styles.row}>
+            <View pointerEvents="none">
+              <Switch
+                value={secureFlagOn}
+                onValueChange={() => {}}
+                trackColor={{ false: colors.border, true: colors.accentDim }}
+                thumbColor={secureFlagOn ? colors.accent : colors.subtext}
+              />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.row} onPress={() => changePanicShake(!panicShake)} activeOpacity={0.7}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="alert-circle-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Блокировка встряской</Text>
-              <Text style={styles.rowDesc}>Резко встряхните телефон, чтобы мгновенно заблокировать сейф</Text>
+              <Text style={styles.rowTitle}>{s.settings.security.panicShake}</Text>
+              <Text style={styles.rowDesc}>{s.settings.security.panicShakeDesc}</Text>
             </View>
-            <Switch
-              value={panicShake}
-              onValueChange={changePanicShake}
-              trackColor={{ false: colors.border, true: colors.accentDim }}
-              thumbColor={panicShake ? colors.accent : colors.subtext}
-            />
-          </View>
+            <View pointerEvents="none">
+              <Switch
+                value={panicShake}
+                onValueChange={() => {}}
+                trackColor={{ false: colors.border, true: colors.accentDim }}
+                thumbColor={panicShake ? colors.accent : colors.subtext}
+              />
+            </View>
+          </TouchableOpacity>
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="timer-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Автоблокировка</Text>
+              <Text style={styles.rowTitle}>{s.settings.security.autoLock}</Text>
               <View style={styles.limitRow}>
-                {AUTO_LOCK_OPTIONS.map(opt => (
+                {AUTO_LOCK_VALUES.map((val, i) => (
                   <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.limitBtn, autoLock === opt.value && styles.limitBtnActive]}
-                    onPress={() => changeAutoLock(opt.value)}
+                    key={val}
+                    style={[styles.limitBtn, autoLock === val && styles.limitBtnActive]}
+                    onPress={() => changeAutoLock(val)}
                   >
-                    <Text style={[styles.limitTxt, autoLock === opt.value && styles.limitTxtActive]}>
-                      {opt.label}
+                    <Text style={[styles.limitTxt, autoLock === val && styles.limitTxtActive]}>
+                      {s.settings.security.autoLockOptions[i]}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -385,20 +393,20 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="lock-closed-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Заблокировать сейф</Text>
-              <Text style={styles.rowDesc}>Выйти и потребовать PIN при следующем открытии</Text>
+              <Text style={styles.rowTitle}>{s.settings.security.lockNow}</Text>
+              <Text style={styles.rowDesc}>{s.settings.security.lockNowDesc}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ВНЕШНИЙ ВИД</Text>
-          <View style={[styles.row, styles.rowNoBorder]}>
+          <Text style={styles.sectionLabel}>{s.settings.sections.appearance}</Text>
+          <View style={styles.row}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="contrast-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Тема</Text>
+              <Text style={styles.rowTitle}>{s.settings.appearance.theme}</Text>
             </View>
             <View style={styles.themeSelector}>
               {(['system', 'light', 'dark'] as ThemeMode[]).map((m) => (
@@ -416,17 +424,38 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               ))}
             </View>
           </View>
+          <View style={[styles.row, styles.rowNoBorder]}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="language-outline" size={20} color={colors.subtext} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Language</Text>
+            </View>
+            <View style={styles.themeSelector}>
+              {(['ru', 'en'] as Lang[]).map(l => (
+                <TouchableOpacity
+                  key={l}
+                  style={[styles.themeBtn, currentLang === l && styles.themeBtnActive]}
+                  onPress={() => changeLang(l)}
+                >
+                  <Text style={[styles.langBtnTxt, currentLang === l && { color: '#fff' }]}>
+                    {l.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ИНФОРМАЦИЯ</Text>
+          <Text style={styles.sectionLabel}>{s.settings.sections.info}</Text>
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="shield-checkmark-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Шифрование</Text>
-              <Text style={styles.rowDesc}>AES-256-GCM, ключи в Android Keystore</Text>
+              <Text style={styles.rowTitle}>{s.settings.info.encryption}</Text>
+              <Text style={styles.rowDesc}>{s.settings.info.encryptionDesc}</Text>
             </View>
           </View>
           <View style={[styles.row, styles.rowNoBorder]}>
@@ -434,27 +463,27 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="cloud-offline-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Полностью офлайн</Text>
-              <Text style={styles.rowDesc}>Приложение никогда не обращается в интернет</Text>
+              <Text style={styles.rowTitle}>{s.settings.info.offline}</Text>
+              <Text style={styles.rowDesc}>{s.settings.info.offlineDesc}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ОПАСНАЯ ЗОНА</Text>
+          <Text style={styles.sectionLabel}>{s.settings.sections.danger}</Text>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={confirmDeleteAll}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={[styles.rowTitle, { color: colors.danger }]}>Удалить все данные</Text>
-              <Text style={styles.rowDesc}>Необратимо. Файлы из галереи не затрагиваются.</Text>
+              <Text style={[styles.rowTitle, { color: colors.danger }]}>{s.settings.danger.deleteAll}</Text>
+              <Text style={styles.rowDesc}>{s.settings.danger.deleteAllDesc}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.aboutBtn} onPress={showAbout}>
-          <Text style={styles.aboutText}>О приложении</Text>
+          <Text style={styles.aboutText}>{s.settings.about}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -14,6 +14,7 @@ import { formatFileSize } from '../utils/media'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 import type { VaultFile } from '../types'
+import { s } from '../i18n'
 
 interface Props {
   fileKey: Uint8Array
@@ -73,7 +74,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
   const pickAndImport = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) {
-      Alert.alert('Нет доступа', 'Разрешите доступ к галерее в настройках.')
+      Alert.alert(s.import.noAccess, s.import.noAccessMsg)
       return
     }
 
@@ -90,11 +91,11 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
     const oversized = assets.filter(a => a.fileSize && a.fileSize > 500 * 1024 * 1024)
     if (oversized.length > 0) {
       Alert.alert(
-        'Предупреждение',
-        `${oversized.length} файлов(а) больше 500 МБ. Импорт может занять много времени.`,
+        s.import.oversized,
+        s.import.oversizedMsg(oversized.length),
         [
-          { text: 'Продолжить', onPress: () => doImport(assets) },
-          { text: 'Отмена', style: 'cancel' },
+          { text: s.import.continue, onPress: () => doImport(assets) },
+          { text: s.import.cancel, style: 'cancel' },
         ]
       )
       return
@@ -149,22 +150,20 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
     setTotalInVault(total.length)
 
     const msg = failed > 0
-      ? `Скопировано: ${success}. Ошибок: ${failed}.\n\nОригиналы остались в галерее. Вы можете удалить их вручную.`
-      : `Скопировано ${success} файлов(а).\n\nОригиналы остались в галерее. Удалите их вручную при желании.`
+      ? s.import.doneFailed(success, failed)
+      : s.import.doneSuccess(success)
 
-    Alert.alert('Импорт завершён', msg, [{ text: 'OK', onPress: onImportDone }])
+    Alert.alert(s.import.doneTitle, msg, [{ text: s.import.doneOk, onPress: onImportDone }])
   }
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Импорт медиа</Text>
-        <Text style={styles.subtitle}>
-          Файлы копируются и шифруются внутри сейфа. Оригиналы в галерее не изменяются.
-        </Text>
+        <Text style={styles.title}>{s.import.title}</Text>
+        <Text style={styles.subtitle}>{s.import.subtitle}</Text>
 
         <TouchableOpacity style={styles.statsCard} onPress={() => setStatsVisible(true)} activeOpacity={0.7}>
-          <Text style={styles.statsLabel}>Файлов в сейфе</Text>
+          <Text style={styles.statsLabel}>{s.import.filesInVault}</Text>
           <Text style={styles.statsValue}>{totalInVault}</Text>
         </TouchableOpacity>
 
@@ -173,8 +172,8 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
             <ActivityIndicator color={colors.accent} size="small" />
             <Text style={styles.progressText}>
               {progress
-                ? `Шифрование ${progress.current}/${progress.total}: ${progress.name}`
-                : 'Подготовка...'}
+                ? s.import.encrypting(progress.current, progress.total, progress.name)
+                : s.import.preparing}
             </Text>
             {progress && (
               <View style={styles.progressBar}>
@@ -190,28 +189,28 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
         ) : (
           <TouchableOpacity style={styles.importBtn} onPress={pickAndImport}>
             <Ionicons name="cloud-download-outline" size={40} color={colors.accent} style={styles.importIcon} />
-            <Text style={styles.importText}>Выбрать из галереи</Text>
-            <Text style={styles.importHint}>Фото, видео, GIF</Text>
+            <Text style={styles.importText}>{s.import.pick}</Text>
+            <Text style={styles.importHint}>{s.import.pickHint}</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Как работает сейф</Text>
+          <Text style={styles.infoTitle}>{s.import.howTitle}</Text>
           <View style={styles.infoRow}>
             <Ionicons name="lock-closed-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
-            <Text style={styles.infoItem}>Шифрование AES-256-GCM</Text>
+            <Text style={styles.infoItem}>{s.import.how1}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="folder-open-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
-            <Text style={styles.infoItem}>Оригиналы в галерее не затрагиваются</Text>
+            <Text style={styles.infoItem}>{s.import.how2}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="shuffle-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
-            <Text style={styles.infoItem}>Каждый день — случайные 25 файлов</Text>
+            <Text style={styles.infoItem}>{s.import.how3}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="eye-off-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
-            <Text style={styles.infoItem}>Без PIN данные недоступны</Text>
+            <Text style={styles.infoItem}>{s.import.how4}</Text>
           </View>
         </View>
       </ScrollView>

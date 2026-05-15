@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 export interface SelectionAction {
   label: string
@@ -37,9 +38,9 @@ export const SelectionBar: React.FC<Props> = ({ count, onCancel, actions }) => {
   return (
     <View style={[styles.container, { paddingBottom: Math.max(bottom, 16) }]}>
       <TouchableOpacity onPress={onCancel} style={styles.side}>
-        <Text style={styles.cancelTxt}>Отмена</Text>
+        <Text style={styles.cancelTxt}>{s.selection.cancel}</Text>
       </TouchableOpacity>
-      <Text style={styles.count}>{count} выбрано</Text>
+      <Text style={styles.count}>{s.selection.selected(count)}</Text>
       <View style={[styles.side, styles.actionsRow]}>
         {actions.map(a => (
           <TouchableOpacity key={a.label} onPress={a.onPress}>

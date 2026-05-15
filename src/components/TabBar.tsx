@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import type { MainTab } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   active: MainTab
@@ -14,10 +15,10 @@ interface Props {
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
-const TABS: { id: MainTab; label: string; icon: IoniconName; iconActive: IoniconName }[] = [
-  { id: 'daily', label: 'Сегодня', icon: 'images-outline', iconActive: 'images' },
-  { id: 'import', label: 'Импорт', icon: 'cloud-download-outline', iconActive: 'cloud-download' },
-  { id: 'settings', label: 'Настройки', icon: 'settings-outline', iconActive: 'settings' },
+const TABS: { id: MainTab; icon: IoniconName; iconActive: IoniconName }[] = [
+  { id: 'daily', icon: 'images-outline', iconActive: 'images' },
+  { id: 'import', icon: 'cloud-download-outline', iconActive: 'cloud-download' },
+  { id: 'settings', icon: 'settings-outline', iconActive: 'settings' },
 ]
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -37,10 +38,20 @@ export const TabBar: React.FC<Props> = ({ active, onSelect, dailyEnabled }) => {
       <View style={styles.bar}>
         {TABS.map(tab => {
           const isActive = active === tab.id
-          const label = tab.id === 'daily' && !dailyEnabled ? 'Медиа' : tab.label
-          const icon = tab.id === 'daily' && !dailyEnabled
-            ? (isActive ? 'grid' : 'grid-outline')
-            : (isActive ? tab.iconActive : tab.icon)
+          let label: string
+          let icon: IoniconName
+          if (tab.id === 'daily') {
+            label = dailyEnabled ? s.tabs.today : s.tabs.media
+            icon = dailyEnabled
+              ? (isActive ? tab.iconActive : tab.icon)
+              : (isActive ? 'grid' : 'grid-outline')
+          } else if (tab.id === 'import') {
+            label = s.tabs.import
+            icon = isActive ? tab.iconActive : tab.icon
+          } else {
+            label = s.tabs.settings
+            icon = isActive ? tab.iconActive : tab.icon
+          }
           return (
             <TouchableOpacity
               key={tab.id}

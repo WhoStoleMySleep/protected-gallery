@@ -13,6 +13,7 @@ import { getMediaKind } from '../utils/media'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -22,17 +23,17 @@ const ITEM_SIZE = (width - GAP * (COLS + 1)) / COLS
 type FilterType = 'all' | 'image' | 'video' | 'gif'
 type SortType = 'date_desc' | 'date_asc' | 'size_desc'
 
-const FILTERS: { key: FilterType; label: string }[] = [
-  { key: 'all', label: 'Все' },
-  { key: 'image', label: 'Фото' },
-  { key: 'video', label: 'Видео' },
-  { key: 'gif', label: 'GIF' },
+const FILTERS: { key: FilterType; labelKey: keyof typeof s.allMedia.filters }[] = [
+  { key: 'all', labelKey: 'all' },
+  { key: 'image', labelKey: 'image' },
+  { key: 'video', labelKey: 'video' },
+  { key: 'gif', labelKey: 'gif' },
 ]
 
-const SORT_OPTIONS: { key: SortType; label: string; icon: 'arrow-down' | 'arrow-up' | 'resize' }[] = [
-  { key: 'date_desc', label: 'Новые', icon: 'arrow-down' },
-  { key: 'date_asc', label: 'Старые', icon: 'arrow-up' },
-  { key: 'size_desc', label: 'Размер', icon: 'resize' },
+const SORT_OPTIONS: { key: SortType; labelKey: keyof typeof s.allMedia.sort; icon: 'arrow-down' | 'arrow-up' | 'resize' }[] = [
+  { key: 'date_desc', labelKey: 'date_desc', icon: 'arrow-down' },
+  { key: 'date_asc', labelKey: 'date_asc', icon: 'arrow-up' },
+  { key: 'size_desc', labelKey: 'size_desc', icon: 'resize' },
 ]
 
 interface Props {
@@ -153,10 +154,10 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         {onBack
-          ? <TouchableOpacity style={styles.backBtn} onPress={onBack}><Text style={styles.backTxt}>‹ Назад</Text></TouchableOpacity>
+          ? <TouchableOpacity style={styles.backBtn} onPress={onBack}><Text style={styles.backTxt}>{s.allMedia.back}</Text></TouchableOpacity>
           : <View style={styles.backBtn} />
         }
-        <Text style={styles.title}>Все медиа</Text>
+        <Text style={styles.title}>{s.allMedia.title}</Text>
         {!loading
           ? <Text style={styles.count}>{displayFiles.length}/{files.length}</Text>
           : <View style={styles.backBtn} />
@@ -171,13 +172,13 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
               style={[styles.chip, filter === f.key && styles.chipActive]}
               onPress={() => setFilter(f.key)}
             >
-              <Text style={[styles.chipTxt, filter === f.key && styles.chipTxtActive]}>{f.label}</Text>
+              <Text style={[styles.chipTxt, filter === f.key && styles.chipTxtActive]}>{s.allMedia.filters[f.labelKey]}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
         <TouchableOpacity style={styles.sortBtn} onPress={cycleSort}>
           <Ionicons name={currentSortOption.icon} size={13} color={colors.subtext} />
-          <Text style={styles.sortTxt}>{currentSortOption.label}</Text>
+          <Text style={styles.sortTxt}>{s.allMedia.sort[currentSortOption.labelKey]}</Text>
         </TouchableOpacity>
       </View>
 
@@ -186,17 +187,15 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
       ) : loadError ? (
         <View style={styles.center}>
           <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
-            Ошибка загрузки:{'\n'}{loadError}
+            {s.allMedia.loadError}{'\n'}{loadError}
           </Text>
         </View>
       ) : displayFiles.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="images-outline" size={48} color={colors.subtext} />
-          <Text style={styles.emptyText}>{files.length === 0 ? 'Сейф пуст' : 'Нет совпадений'}</Text>
+          <Text style={styles.emptyText}>{files.length === 0 ? s.allMedia.vaultEmpty : s.allMedia.noMatch}</Text>
           <Text style={styles.emptyHint}>
-            {files.length === 0
-              ? 'Перейдите на вкладку «Импорт», чтобы добавить медиафайлы'
-              : 'Попробуйте другой фильтр'}
+            {files.length === 0 ? s.allMedia.vaultEmptyHint : s.allMedia.noMatchHint}
           </Text>
         </View>
       ) : (
@@ -227,8 +226,8 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Архив', onPress: archiveSelected },
-            { label: 'Корзина', danger: true, onPress: trashSelected },
+            { label: s.selection.archive, onPress: archiveSelected },
+            { label: s.selection.trash, danger: true, onPress: trashSelected },
           ]}
         />
       )}

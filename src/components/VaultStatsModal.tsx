@@ -7,6 +7,7 @@ import { formatFileSize } from '../utils/media'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 import type { VaultFile } from '../types'
+import { s } from '../i18n'
 
 interface Stats {
   total: number
@@ -18,7 +19,7 @@ interface Stats {
 }
 
 const buildStats = (files: VaultFile[]): Stats => {
-  const s: Stats = {
+  const st: Stats = {
     total: files.length,
     totalSize: 0,
     image: { count: 0, size: 0 },
@@ -27,14 +28,14 @@ const buildStats = (files: VaultFile[]): Stats => {
     other: { count: 0, size: 0 },
   }
   for (const f of files) {
-    s.totalSize += f.size
+    st.totalSize += f.size
     const k = getMediaKind(f.mimeType)
-    if (k === 'image') { s.image.count++; s.image.size += f.size }
-    else if (k === 'video') { s.video.count++; s.video.size += f.size }
-    else if (k === 'gif') { s.gif.count++; s.gif.size += f.size }
-    else { s.other.count++; s.other.size += f.size }
+    if (k === 'image') { st.image.count++; st.image.size += f.size }
+    else if (k === 'video') { st.video.count++; st.video.size += f.size }
+    else if (k === 'gif') { st.gif.count++; st.gif.size += f.size }
+    else { st.other.count++; st.other.size += f.size }
   }
-  return s
+  return st
 }
 
 interface Props {
@@ -43,19 +44,14 @@ interface Props {
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
-  backdrop: {
-    flex: 1, backgroundColor: c.overlay,
-    justifyContent: 'flex-end',
-  },
+  backdrop: { flex: 1, backgroundColor: c.overlay, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: c.card,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 24, paddingBottom: 40,
   },
   title: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 20 },
-  totalRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16,
-  },
+  totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16 },
   totalNum: { fontSize: 42, fontWeight: '800', color: c.accent },
   totalLabel: { fontSize: 16, color: c.subtext, flex: 1 },
   totalSize: { fontSize: 15, color: c.subtextLight, fontWeight: '600' },
@@ -91,11 +87,18 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
       .finally(() => setLoading(false))
   }, [visible])
 
+  const rows = stats ? [
+    { label: s.stats.photos, icon: 'image-outline' as const, data: stats.image },
+    { label: s.stats.videos, icon: 'videocam-outline' as const, data: stats.video },
+    { label: s.stats.gifs, icon: 'film-outline' as const, data: stats.gif },
+    { label: s.stats.other, icon: 'document-outline' as const, data: stats.other },
+  ].filter(r => r.data.count > 0) : []
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
-          <Text style={styles.title}>Файлы в сейфе</Text>
+          <Text style={styles.title}>{s.stats.title}</Text>
 
           {loading || !stats ? (
             <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
@@ -103,22 +106,17 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
             <>
               <View style={styles.totalRow}>
                 <Text style={styles.totalNum}>{stats.total}</Text>
-                <Text style={styles.totalLabel}>файлов</Text>
+                <Text style={styles.totalLabel}>{s.stats.filesLabel}</Text>
                 <Text style={styles.totalSize}>{formatFileSize(stats.totalSize)}</Text>
               </View>
 
               <View style={styles.divider} />
 
-              {([
-                { label: 'Фото', icon: 'image-outline', data: stats.image },
-                { label: 'Видео', icon: 'videocam-outline', data: stats.video },
-                { label: 'GIF', icon: 'film-outline', data: stats.gif },
-                { label: 'Другое', icon: 'document-outline', data: stats.other },
-              ] as const).filter(r => r.data.count > 0).map(row => (
+              {rows.map(row => (
                 <View key={row.label} style={styles.row}>
                   <Ionicons name={row.icon} size={20} color={colors.subtext} style={styles.rowIcon} />
                   <Text style={styles.rowLabel}>{row.label}</Text>
-                  <Text style={styles.rowCount}>{row.data.count} шт.</Text>
+                  <Text style={styles.rowCount}>{s.stats.pieces(row.data.count)}</Text>
                   <Text style={styles.rowSize}>{formatFileSize(row.data.size)}</Text>
                 </View>
               ))}
@@ -126,7 +124,7 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
           )}
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeTxt}>Закрыть</Text>
+            <Text style={styles.closeTxt}>{s.stats.close}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>

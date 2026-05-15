@@ -12,6 +12,7 @@ import { getFilesByStatus, updateFileMeta } from '../storage/metadata'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -85,10 +86,10 @@ export const ArchiveScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Text style={styles.backTxt}>‹ Назад</Text>
+          <Text style={styles.backTxt}>{s.archive.back}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Архив</Text>
-        {!loading && <Text style={styles.count}>{files.length} файлов</Text>}
+        <Text style={styles.title}>{s.archive.title}</Text>
+        {!loading && <Text style={styles.count}>{s.archive.count(files.length)}</Text>}
         {loading && <View style={styles.backBtn} />}
       </View>
 
@@ -97,8 +98,8 @@ export const ArchiveScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }
       ) : files.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="archive-outline" size={48} color={colors.subtext} style={styles.emptyIcon} />
-          <Text style={styles.emptyText}>Архив пуст</Text>
-          <Text style={styles.emptyHint}>Заархивированные файлы не попадают в ежедневную подборку</Text>
+          <Text style={styles.emptyText}>{s.archive.empty}</Text>
+          <Text style={styles.emptyHint}>{s.archive.emptyHint}</Text>
         </View>
       ) : (
         <FlatList
@@ -128,7 +129,7 @@ export const ArchiveScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }
           count={selected.size}
           onCancel={clearSelection}
           actions={[
-            { label: 'Восстановить', onPress: restore },
+            { label: s.selection.restore, onPress: restore },
           ]}
         />
       )}

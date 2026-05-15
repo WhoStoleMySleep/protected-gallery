@@ -9,7 +9,7 @@ import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore, saveFile } from './src/storage/metadata'
 import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
-import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled, getSecureFlagEnabled } from './src/storage/settings'
+import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled, getSecureFlagEnabled, getLanguageOverride } from './src/storage/settings'
 import { applySecureFlag } from './src/native/secureFlag'
 import { Accelerometer } from 'expo-sensors'
 
@@ -29,6 +29,7 @@ import { ThemeProvider } from './src/context/ThemeContext'
 
 import type { AppScreen, MainTab, ViewerReturn, VaultMode, VaultFile } from './src/types'
 import { DARK_COLORS } from './src/theme'
+import { s, applyLang } from './src/i18n'
 
 function AppContent() {
   const [screen, setScreen] = useState<AppScreen>({ name: 'loading' })
@@ -44,6 +45,8 @@ function AppContent() {
   const fileKeyRef = useRef<Uint8Array | null>(null)
   const screenRef = useRef(screen)
   const [panicShakeEnabled, setPanicShakeEnabled] = useState(false)
+  const [langKey, setLangKey] = useState(0)
+  const handleLangChange = useCallback(() => setLangKey(k => k + 1), [])
   const lockRef = useRef<() => void>(() => {})
   const resetAutoLockRef = useRef<() => void>(() => {})
   const activityResponder = useRef(PanResponder.create({
@@ -60,6 +63,7 @@ function AppContent() {
     getBiometricsEnabled().then(setBiometricsEnabledState)
     getDailyEnabled().then(setDailyEnabledState)
     getSecureFlagEnabled().then(enabled => { if (!enabled) applySecureFlag(false) })
+    getLanguageOverride().then(l => { if (l) applyLang(l) })
   }, [])
 
   // Shake-to-lock
@@ -131,7 +135,7 @@ function AppContent() {
         } catch {}
       }
       if (success > 0) {
-        Alert.alert('Импорт завершён', `Добавлено ${success} файл${success === 1 ? '' : success < 5 ? 'а' : 'ов'} из галереи.`)
+        Alert.alert(s.app.importDoneTitle, s.app.importDone(success))
       }
     } catch {}
   }, [])
@@ -249,9 +253,9 @@ function AppContent() {
   if (initError) {
     return (
       <View style={styles.errorScreen}>
-        <Text style={styles.errorTitle}>Ошибка запуска</Text>
+        <Text style={styles.errorTitle}>{s.app.startupError}</Text>
         <Text style={styles.errorMsg}>{initError}</Text>
-        <Text style={styles.errorHint}>Откройте консоль (j) для подробностей</Text>
+        <Text style={styles.errorHint}>{s.app.startupErrorHint}</Text>
       </View>
     )
   }
@@ -366,6 +370,7 @@ function AppContent() {
               onPanicShakeChange={setPanicShakeEnabled}
             onBiometricsChange={setBiometricsEnabledState}
             onDailyEnabledChange={setDailyEnabledState}
+            onLangChange={handleLangChange}
             />
           </View>
         </View>

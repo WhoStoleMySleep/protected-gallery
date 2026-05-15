@@ -5,6 +5,7 @@ import { PinPad } from '../components/PinPad'
 import { verifyPin, setupPin } from '../crypto/pin'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   onComplete: () => void
@@ -39,7 +40,7 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
     try {
       const ok = await verifyPin(pin)
       if (ok) { setError(null); setStep('newPin') }
-      else setError('Неверный PIN. Попробуйте снова.')
+      else setError(s.changePin.wrong)
     } finally { setLoading(false) }
   }
 
@@ -51,7 +52,7 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
 
   const handleConfirmNew = async (pin: string) => {
     if (pin !== newPin) {
-      setError('PIN не совпадает. Попробуйте снова.')
+      setError(s.changePin.mismatch)
       setStep('newPin')
       setNewPin('')
       return
@@ -62,9 +63,9 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
   }
 
   const titles: Record<Step, string> = {
-    verify: 'Текущий PIN',
-    newPin: 'Новый PIN',
-    confirmNew: 'Повторите новый PIN',
+    verify: s.changePin.verify,
+    newPin: s.changePin.newPin,
+    confirmNew: s.changePin.confirmNew,
   }
   const handlers = { verify: handleVerify, newPin: handleNewPin, confirmNew: handleConfirmNew }
 
@@ -75,8 +76,8 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel}><Text style={styles.cancel}>Отмена</Text></TouchableOpacity>
-        <Text style={styles.title}>Смена PIN-кода</Text>
+        <TouchableOpacity onPress={onCancel}><Text style={styles.cancel}>{s.changePin.cancel}</Text></TouchableOpacity>
+        <Text style={styles.title}>{s.changePin.title}</Text>
         <View style={{ width: 64 }} />
       </View>
       <PinPad title={titles[step]} onComplete={handlers[step]} error={error} />

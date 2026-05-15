@@ -17,6 +17,7 @@ import { ZoomableImage } from '../components/ZoomableImage'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 const { width, height } = Dimensions.get('window')
 const DISMISS_THRESHOLD = 130
@@ -147,7 +148,7 @@ const FileSlide: React.FC<{
     return (
       <View style={styles.slide}>
         <Ionicons name="warning-outline" size={32} color={colors.subtext} />
-        <Text style={{ color: colors.subtext, marginTop: 8 }}>Ошибка загрузки</Text>
+        <Text style={{ color: colors.subtext, marginTop: 8 }}>{s.viewer.loadError}</Text>
       </View>
     )
   }
@@ -324,12 +325,12 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
     if (!currentFile) return
     showBars()
     Alert.alert(
-      'Удалить файл?',
-      'Файл будет перемещён в корзину.',
+      s.viewer.deleteTitle,
+      s.viewer.deleteMsg,
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: s.viewer.cancel, style: 'cancel' },
         {
-          text: 'В корзину',
+          text: s.viewer.toTrash,
           style: 'destructive',
           onPress: async () => {
             await updateFileMeta(currentFile.id, { status: 'trashed', trashedAt: Date.now() })
@@ -360,7 +361,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
       const uri = await decryptToTemp(currentFile.encryptedPath, fileKey, currentFile.mimeType, currentFile.id)
       await Sharing.shareAsync(uri, { mimeType: currentFile.mimeType, dialogTitle: currentFile.originalName })
     } catch (e) {
-      Alert.alert('Ошибка', 'Не удалось поделиться файлом.')
+      Alert.alert(s.viewer.shareError, s.viewer.shareErrorMsg)
     }
   }
 
@@ -421,7 +422,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
           <Text style={styles.infoMeta}>{formatFileSize(currentFile.size)}</Text>
           <Text style={styles.infoMeta}>{formatDate(currentFile.importedAt)}</Text>
           {(currentFile.duration != null || liveDuration != null) && (
-            <Text style={styles.infoMeta}>Длительность: {formatDuration(normalizeDuration(currentFile.duration ?? liveDuration!))}</Text>
+            <Text style={styles.infoMeta}>{s.viewer.duration} {formatDuration(normalizeDuration(currentFile.duration ?? liveDuration!))}</Text>
           )}
           {currentFile.width != null && (
             <Text style={styles.infoMeta}>{currentFile.width} × {currentFile.height}</Text>
@@ -436,15 +437,15 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
         <SafeAreaView edges={['bottom']} style={styles.actionBar}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color="#fff" />
-            <Text style={styles.actionLabel}>Поделиться</Text>
+            <Text style={styles.actionLabel}>{s.viewer.share}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleArchive}>
             <Ionicons name={isArchived ? 'archive' : 'archive-outline'} size={24} color="#fff" />
-            <Text style={styles.actionLabel}>{isArchived ? 'Убрать' : 'Архив'}</Text>
+            <Text style={styles.actionLabel}>{isArchived ? s.viewer.unarchiveBtn : s.viewer.archiveBtn}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleTrash}>
             <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
-            <Text style={styles.actionLabelDanger}>Удалить</Text>
+            <Text style={styles.actionLabelDanger}>{s.viewer.deleteBtn}</Text>
           </TouchableOpacity>
         </SafeAreaView>
       </Animated.View>

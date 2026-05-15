@@ -79,3 +79,15 @@ export const getSecureFlagEnabled = async (): Promise<boolean> => {
 export const setSecureFlagEnabled = async (enabled: boolean): Promise<void> => {
   await AsyncStorage.setItem(SECURE_FLAG_KEY, String(enabled))
 }
+
+const LANG_OVERRIDE_KEY = 'vault:settings:language'
+export type LangOverride = 'ru' | 'en'
+
+export const getLanguageOverride = async (): Promise<LangOverride | null> => {
+  const raw = await AsyncStorage.getItem(LANG_OVERRIDE_KEY)
+  return raw === 'ru' || raw === 'en' ? raw : null
+}
+
+export const setLanguageOverride = async (l: LangOverride): Promise<void> => {
+  await AsyncStorage.setItem(LANG_OVERRIDE_KEY, l)
+}

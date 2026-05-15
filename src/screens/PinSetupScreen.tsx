@@ -5,6 +5,7 @@ import { PinPad } from '../components/PinPad'
 import { setupPin } from '../crypto/pin'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
+import { s } from '../i18n'
 
 interface Props {
   onComplete: () => void
@@ -34,7 +35,7 @@ export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
 
   const handleConfirm = async (pin: string) => {
     if (pin !== firstPin) {
-      setError('PIN не совпадает. Попробуйте снова.')
+      setError(s.pin.mismatch)
       setStep('enter')
       setFirstPin('')
       return
@@ -60,13 +61,13 @@ export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
     <SafeAreaView style={styles.container}>
       {step === 'enter' ? (
         <PinPad
-          title="Создайте PIN-код"
+          title={s.pin.create}
           onComplete={handleFirst}
           error={error}
         />
       ) : (
         <PinPad
-          title="Повторите PIN-код"
+          title={s.pin.repeat}
           onComplete={handleConfirm}
           error={error}
         />
