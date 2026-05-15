@@ -38,7 +38,7 @@ const SORT_OPTIONS: { key: SortType; label: string; icon: 'arrow-down' | 'arrow-
 interface Props {
   fileKey: Uint8Array
   onOpenViewer: (fileIds: string[], index: number) => void
-  onBack: () => void
+  onBack?: () => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -90,6 +90,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
   const { selected, selectionMode, enterSelection, toggleItem, clearSelection } = useSelection()
 
   useEffect(() => {
+    if (!onBack) return
     const sub = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true })
     return () => sub.remove()
   }, [onBack])
@@ -151,9 +152,10 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Text style={styles.backTxt}>‹ Назад</Text>
-        </TouchableOpacity>
+        {onBack
+          ? <TouchableOpacity style={styles.backBtn} onPress={onBack}><Text style={styles.backTxt}>‹ Назад</Text></TouchableOpacity>
+          : <View style={styles.backBtn} />
+        }
         <Text style={styles.title}>Все медиа</Text>
         {!loading
           ? <Text style={styles.count}>{displayFiles.length}/{files.length}</Text>

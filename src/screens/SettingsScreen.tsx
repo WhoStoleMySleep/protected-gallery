@@ -7,7 +7,7 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled, getDailyEnabled, setDailyEnabled } from '../storage/settings'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
@@ -34,6 +34,7 @@ interface Props {
   onAutoLockChange?: (t: AutoLockTimeout) => void
   onPanicShakeChange?: (enabled: boolean) => void
   onBiometricsChange?: (enabled: boolean) => void
+  onDailyEnabledChange?: (enabled: boolean) => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -69,12 +70,13 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   limitBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
   limitTxt: { color: c.subtext, fontSize: 14, fontWeight: '600' },
   limitTxtActive: { color: '#fff' },
+  rowDisabled: { opacity: 0.4 },
   themeSelector: { flexDirection: 'row', gap: 6 },
   themeBtn: { padding: 8, borderRadius: 8, backgroundColor: c.cardAlt },
   themeBtnActive: { backgroundColor: c.accent },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
@@ -83,13 +85,15 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   const [autoLock, setAutoLockState] = useState<AutoLockTimeout>(5)
   const [panicShake, setPanicShakeState] = useState(false)
   const [deviceHasBiometrics, setDeviceHasBiometrics] = useState(false)
-  const [biometricsOn, setBiometricsOn] = useState(true)
+  const [biometricsOn, setBiometricsOn] = useState(false)
+  const [dailyOn, setDailyOn] = useState(false)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
     getAutoLockTimeout().then(setAutoLockState)
     getPanicShakeEnabled().then(setPanicShakeState)
     getBiometricsEnabled().then(setBiometricsOn)
+    getDailyEnabled().then(setDailyOn)
     LocalAuthentication.hasHardwareAsync().then(async (hw) => {
       if (!hw) return
       const enrolled = await LocalAuthentication.isEnrolledAsync()
@@ -107,6 +111,12 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     setBiometricsOn(val)
     await setBiometricsEnabled(val)
     onBiometricsChange?.(val)
+  }
+
+  const changeDaily = async (val: boolean) => {
+    setDailyOn(val)
+    await setDailyEnabled(val)
+    onDailyEnabledChange?.(val)
   }
 
   const changeAutoLock = async (t: AutoLockTimeout) => {
@@ -182,9 +192,24 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>ЕЖЕДНЕВНАЯ ПОДБОРКА</Text>
-          <View style={[styles.row, styles.rowNoBorder]}>
+          <View style={styles.row}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="shuffle-outline" size={20} color={colors.subtext} />
+            </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Файлов в день</Text>
+              <Text style={styles.rowTitle}>Режим «Сегодня»</Text>
+              <Text style={styles.rowDesc}>Случайная подборка файлов каждый день. Если выключено — показывает все медиа.</Text>
+            </View>
+            <Switch
+              value={dailyOn}
+              onValueChange={changeDaily}
+              trackColor={{ false: colors.border, true: colors.accentDim }}
+              thumbColor={dailyOn ? colors.accent : colors.subtext}
+            />
+          </View>
+          <View style={[styles.row, styles.rowNoBorder, !dailyOn && styles.rowDisabled]}>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, !dailyOn && { color: colors.subtext }]}>Файлов в день</Text>
               <Text style={styles.rowDesc}>Сколько файлов показывать во вкладке «Сегодня»</Text>
               <View style={styles.inputRow}>
                 <TextInput

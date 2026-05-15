@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext'
 interface Props {
   active: MainTab
   onSelect: (tab: MainTab) => void
+  dailyEnabled?: boolean
 }
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
@@ -27,7 +28,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   labelActive: { color: c.accent, fontWeight: '600' },
 })
 
-export const TabBar: React.FC<Props> = ({ active, onSelect }) => {
+export const TabBar: React.FC<Props> = ({ active, onSelect, dailyEnabled }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
@@ -36,6 +37,10 @@ export const TabBar: React.FC<Props> = ({ active, onSelect }) => {
       <View style={styles.bar}>
         {TABS.map(tab => {
           const isActive = active === tab.id
+          const label = tab.id === 'daily' && !dailyEnabled ? 'Медиа' : tab.label
+          const icon = tab.id === 'daily' && !dailyEnabled
+            ? (isActive ? 'grid' : 'grid-outline')
+            : (isActive ? tab.iconActive : tab.icon)
           return (
             <TouchableOpacity
               key={tab.id}
@@ -43,14 +48,8 @@ export const TabBar: React.FC<Props> = ({ active, onSelect }) => {
               onPress={() => onSelect(tab.id)}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={isActive ? tab.iconActive : tab.icon}
-                size={22}
-                color={isActive ? colors.accent : colors.subtext}
-              />
-              <Text style={[styles.label, isActive && styles.labelActive]}>
-                {tab.label}
-              </Text>
+              <Ionicons name={icon} size={22} color={isActive ? colors.accent : colors.subtext} />
+              <Text style={[styles.label, isActive && styles.labelActive]}>{label}</Text>
             </TouchableOpacity>
           )
         })}

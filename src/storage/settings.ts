@@ -51,9 +51,20 @@ const BIOMETRICS_ENABLED_KEY = 'vault:settings:biometricsEnabled'
 
 export const getBiometricsEnabled = async (): Promise<boolean> => {
   const raw = await AsyncStorage.getItem(BIOMETRICS_ENABLED_KEY)
-  return raw !== 'false'  // default: true
+  return raw === 'true'  // default: false
 }
 
 export const setBiometricsEnabled = async (enabled: boolean): Promise<void> => {
   await AsyncStorage.setItem(BIOMETRICS_ENABLED_KEY, String(enabled))
+}
+
+const DAILY_ENABLED_KEY = 'vault:settings:dailyEnabled'
+
+export const getDailyEnabled = async (): Promise<boolean> => {
+  const raw = await AsyncStorage.getItem(DAILY_ENABLED_KEY)
+  return raw === 'true'  // default: false
+}
+
+export const setDailyEnabled = async (enabled: boolean): Promise<void> => {
+  await AsyncStorage.setItem(DAILY_ENABLED_KEY, String(enabled))
 }

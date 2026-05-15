@@ -9,7 +9,7 @@ import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore, saveFile } from './src/storage/metadata'
 import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
-import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled } from './src/storage/settings'
+import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled } from './src/storage/settings'
 import { Accelerometer } from 'expo-sensors'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
@@ -34,7 +34,8 @@ function AppContent() {
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null)
   const [vaultMode, setVaultMode] = useState<VaultMode>('real')
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
-  const [biometricsEnabled, setBiometricsEnabledState] = useState(true)
+  const [biometricsEnabled, setBiometricsEnabledState] = useState(false)
+  const [dailyEnabled, setDailyEnabledState] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -56,6 +57,7 @@ function AppContent() {
     getAutoLockTimeout().then(t => { autoLockMs.current = t === 0 ? 0 : t * 60 * 1000 })
     getPanicShakeEnabled().then(setPanicShakeEnabled)
     getBiometricsEnabled().then(setBiometricsEnabledState)
+    getDailyEnabled().then(setDailyEnabledState)
   }, [])
 
   // Shake-to-lock
@@ -337,7 +339,10 @@ function AppContent() {
       <View style={styles.bg} {...activityResponder.current.panHandlers}>
         <View style={styles.fill}>
           <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
-            <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
+            {dailyEnabled
+              ? <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
+              : <AllMediaScreen fileKey={fileKey} onOpenViewer={openViewer} />
+            }
           </View>
           <View style={[styles.fill, tab !== 'import' && styles.hidden]}>
             <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
@@ -358,10 +363,11 @@ function AppContent() {
               }}
               onPanicShakeChange={setPanicShakeEnabled}
             onBiometricsChange={setBiometricsEnabledState}
+            onDailyEnabledChange={setDailyEnabledState}
             />
           </View>
         </View>
-        {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}
+        {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} dailyEnabled={dailyEnabled} />}
 
         {/* Вьюер поверх таб-лэйаута — при свайпе вниз виден грид позади */}
         {screen.name === 'viewer' && (
