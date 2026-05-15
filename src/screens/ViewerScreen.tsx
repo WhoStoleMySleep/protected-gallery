@@ -6,7 +6,7 @@ import {
   Animated, PanResponder, BackHandler, Alert,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Sharing from 'expo-sharing'
 import { getFile } from '../storage/metadata'
 import { updateFileMeta } from '../storage/metadata'
@@ -67,7 +67,10 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   actionLabelDanger: { color: '#ff6b6b', fontSize: 11 },
 })
 
+const ACTION_BAR_HEIGHT = 64
+
 const VideoSlide: React.FC<{ uri: string; isActive: boolean }> = ({ uri, isActive }) => {
+  const { bottom, top } = useSafeAreaInsets()
   const player = useVideoPlayer({ uri }, p => { p.loop = true })
 
   useEffect(() => {
@@ -75,10 +78,12 @@ const VideoSlide: React.FC<{ uri: string; isActive: boolean }> = ({ uri, isActiv
     else player.pause()
   }, [isActive])
 
+  const videoHeight = height - ACTION_BAR_HEIGHT - bottom - top - 44
+
   return (
     <VideoView
       player={player}
-      style={{ width, height }}
+      style={{ width, height: videoHeight }}
       contentFit="contain"
       nativeControls
     />
@@ -214,6 +219,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
 
   const toggleBars = () => {
     if (isPanning.current) return
+    if (isCurrentVideo) return
     if (barsVisibleRef.current) hideBars()
     else showBars()
   }
@@ -259,9 +265,12 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
   const isCurrentVideo = currentFile ? getMediaKind(currentFile.mimeType) === 'video' : false
 
   useEffect(() => {
+    if (autoHideTimer.current) { clearTimeout(autoHideTimer.current); autoHideTimer.current = null }
     if (isCurrentVideo) {
-      if (autoHideTimer.current) { clearTimeout(autoHideTimer.current); autoHideTimer.current = null }
-      showBars()
+      // для видео — панели всегда видны, без таймера скрытия
+      barsVisibleRef.current = true
+      setBarsVisible(true)
+      Animated.timing(barsOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start()
       return
     }
     autoHideTimer.current = setTimeout(hideBars, 2500)
