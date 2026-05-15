@@ -9,12 +9,14 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 - AES-256-GCM encryption — every file encrypted individually before being written to disk
 - Keys stored in Android Keystore — never exposed to JS
 - PIN-code protected with brute-force counter
-- Optional biometric unlock (fingerprint / face) — hidden button, no visible hint
+- Optional biometric unlock (fingerprint / face) — hidden button, no visible hint, off by default (click the lower left corner)
 - Safe Mode — a second independent vault opened with a different PIN
-- Daily randomizer — shows a random subset of your media each day
+- Daily randomizer tab — shows a random subset of your media each day (toggleable; shows all media when off)
 - Full media viewer with pinch-to-zoom, horizontal swipe between files, swipe-down to dismiss
+- Auto-hiding viewer controls — fade out after 2.5 s, tap to toggle; always visible for video
 - Trash with 30-day auto-purge
 - Archive for files you want to keep but not see daily
+- Filter by type (photo / video / GIF) and sort in All Media
 - Import from gallery with encrypted thumbnail generation
 - Receive files via Android share sheet (ACTION_SEND / ACTION_SEND_MULTIPLE)
 - Export (temporary decrypted copy shared via system share)
