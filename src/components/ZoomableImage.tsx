@@ -14,40 +14,27 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
   const translateX = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(0)).current
 
-  // Live values tracked via listeners
+  // Current state — updated directly in move handler (not via listener, to avoid async lag)
   const s = useRef(1)
   const tx = useRef(0)
   const ty = useRef(0)
 
-  // Values at gesture start
+  // State snapshot at gesture start / pinch init
   const baseScale = useRef(1)
   const baseTx = useRef(0)
   const baseTy = useRef(0)
-
-  // Pinch tracking
   const initDist = useRef<number | null>(null)
   const initMidX = useRef(0)
   const initMidY = useRef(0)
 
-  // Double-tap
   const lastTap = useRef(0)
-
-  // Sync animated values → refs
-  React.useEffect(() => {
-    const ids = [
-      (scale as any).addListener(({ value }: { value: number }) => { s.current = value; onScaleChange?.(value) }),
-      (translateX as any).addListener(({ value }: { value: number }) => { tx.current = value }),
-      (translateY as any).addListener(({ value }: { value: number }) => { ty.current = value }),
-    ]
-    return () => ids.forEach((id, i) => [scale, translateX, translateY][i].removeListener(id) as any)
-  }, [onScaleChange])
 
   const maxTrans = (sc: number) => ({
     x: Math.max(0, (width * sc - width) / 2),
     y: Math.max(0, (height * sc - height) / 2),
   })
 
-  const clampedTrans = (newTx: number, newTy: number, sc: number) => {
+  const clamp = (newTx: number, newTy: number, sc: number) => {
     const m = maxTrans(sc)
     return {
       x: Math.max(-m.x, Math.min(m.x, newTx)),
@@ -55,18 +42,27 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
     }
   }
 
+  const applyTransform = (newScale: number, newTx: number, newTy: number) => {
+    s.current = newScale
+    tx.current = newTx
+    ty.current = newTy
+    scale.setValue(newScale)
+    translateX.setValue(newTx)
+    translateY.setValue(newTy)
+    onScaleChange?.(newScale)
+  }
+
   const resetZoom = () => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 130, friction: 9 }),
+      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 130, friction: 9 }),
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 130, friction: 9 }),
     ]).start()
     s.current = 1; tx.current = 0; ty.current = 0
     onScaleChange?.(1)
   }
 
   const panResponder = useRef(PanResponder.create({
-    // Claim immediately if zoomed (single finger) or always for 2 fingers
     onStartShouldSetPanResponder: (e) =>
       e.nativeEvent.touches.length === 2 || s.current > 1.05,
     onMoveShouldSetPanResponder: (e) =>
@@ -77,94 +73,112 @@ export const ZoomableImage: React.FC<Props> = ({ uri, onScaleChange }) => {
       baseScale.current = s.current
       baseTx.current = tx.current
       baseTy.current = ty.current
+      initDist.current = null
 
-      if (touches.length === 2) {
-        const dx = touches[0].pageX - touches[1].pageX
-        const dy = touches[0].pageY - touches[1].pageY
-        initDist.current = Math.sqrt(dx * dx + dy * dy)
-        initMidX.current = (touches[0].pageX + touches[1].pageX) / 2
-        initMidY.current = (touches[0].pageY + touches[1].pageY) / 2
-      } else {
-        initDist.current = null
+      if (touches.length === 1) {
+        initMidX.current = touches[0].pageX
+        initMidY.current = touches[0].pageY
       }
     },
 
-    onPanResponderMove: (e, g) => {
+    onPanResponderMove: (e) => {
       const touches = e.nativeEvent.touches
 
-      if (touches.length >= 2 && initDist.current !== null) {
-        // ── Pinch ──
+      if (touches.length >= 2) {
+        if (initDist.current === null) {
+          // Initialize pinch (first 2-finger move, or re-init after finger count change)
+          const dx = touches[0].pageX - touches[1].pageX
+          const dy = touches[0].pageY - touches[1].pageY
+          initDist.current = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+          initMidX.current = (touches[0].pageX + touches[1].pageX) / 2
+          initMidY.current = (touches[0].pageY + touches[1].pageY) / 2
+          baseScale.current = s.current
+          baseTx.current = tx.current
+          baseTy.current = ty.current
+          return
+        }
+
         const dx = touches[0].pageX - touches[1].pageX
         const dy = touches[0].pageY - touches[1].pageY
         const dist = Math.sqrt(dx * dx + dy * dy)
-        const ratio = dist / initDist.current
-        const newScale = Math.max(1, Math.min(6, baseScale.current * ratio))
+        const newScale = Math.max(1, Math.min(6, baseScale.current * dist / initDist.current))
+        const ratio = newScale / baseScale.current
 
-        // Scale around pinch midpoint
-        // tx2 = (midX - w/2) * (1 - newScale/baseScale) + baseTx * newScale/baseScale
-        const scaleRatio = newScale / baseScale.current
-        const newTx = (initMidX.current - width / 2) * (1 - scaleRatio) + baseTx.current * scaleRatio
-        const newTy = (initMidY.current - height / 2) * (1 - scaleRatio) + baseTy.current * scaleRatio
-        const clamped = clampedTrans(newTx, newTy, newScale)
+        // Scale around the initial pinch midpoint
+        const newTx = (initMidX.current - width / 2) * (1 - ratio) + baseTx.current * ratio
+        const newTy = (initMidY.current - height / 2) * (1 - ratio) + baseTy.current * ratio
+        const c = clamp(newTx, newTy, newScale)
 
-        scale.setValue(newScale)
-        translateX.setValue(clamped.x)
-        translateY.setValue(clamped.y)
-      } else if (touches.length === 1 && s.current > 1.05) {
-        // ── Pan while zoomed ──
-        const newTx = baseTx.current + g.dx
-        const newTy = baseTy.current + g.dy
-        const clamped = clampedTrans(newTx, newTy, s.current)
-        translateX.setValue(clamped.x)
-        translateY.setValue(clamped.y)
+        applyTransform(newScale, c.x, c.y)
+
+      } else if (touches.length === 1) {
+        if (initDist.current !== null) {
+          // Finger count just dropped 2→1: re-init pan from current state
+          initDist.current = null
+          baseTx.current = tx.current
+          baseTy.current = ty.current
+          initMidX.current = touches[0].pageX
+          initMidY.current = touches[0].pageY
+          return
+        }
+        if (s.current <= 1.05) return
+
+        const newTx = baseTx.current + (touches[0].pageX - initMidX.current)
+        const newTy = baseTy.current + (touches[0].pageY - initMidY.current)
+        const c = clamp(newTx, newTy, s.current)
+        tx.current = c.x; ty.current = c.y
+        translateX.setValue(c.x)
+        translateY.setValue(c.y)
       }
     },
 
-    onPanResponderRelease: (e) => {
+    onPanResponderRelease: () => {
+      const currentScale = s.current
       initDist.current = null
-      if (s.current < 1.15) {
+
+      if (currentScale < 1.15) {
         resetZoom()
       } else {
-        // Snap translate to clamped bounds
-        const clamped = clampedTrans(tx.current, ty.current, s.current)
-        if (Math.abs(clamped.x - tx.current) > 0.5 || Math.abs(clamped.y - ty.current) > 0.5) {
+        // Snap translation into bounds if drifted
+        const c = clamp(tx.current, ty.current, currentScale)
+        if (Math.abs(c.x - tx.current) > 1 || Math.abs(c.y - ty.current) > 1) {
+          tx.current = c.x; ty.current = c.y
           Animated.parallel([
-            Animated.spring(translateX, { toValue: clamped.x, useNativeDriver: true }),
-            Animated.spring(translateY, { toValue: clamped.y, useNativeDriver: true }),
+            Animated.spring(translateX, { toValue: c.x, useNativeDriver: true }),
+            Animated.spring(translateY, { toValue: c.y, useNativeDriver: true }),
           ]).start()
         }
       }
     },
 
+    // On terminate (system gesture steal) — keep zoom, just snap bounds
     onPanResponderTerminate: () => {
       initDist.current = null
-      if (s.current < 1.15) resetZoom()
+      const c = clamp(tx.current, ty.current, s.current)
+      tx.current = c.x; ty.current = c.y
+      Animated.parallel([
+        Animated.spring(translateX, { toValue: c.x, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: c.y, useNativeDriver: true }),
+      ]).start()
     },
   })).current
 
-  const handlePress = () => {
+  const handleDoubleTap = () => {
     const now = Date.now()
     if (now - lastTap.current < 280) {
       if (s.current > 1.1) {
         resetZoom()
       } else {
-        Animated.spring(scale, { toValue: 2.5, useNativeDriver: true, tension: 120, friction: 8 }).start()
-        onScaleChange?.(2.5)
+        applyTransform(2.5, 0, 0)
+        Animated.spring(scale, { toValue: 2.5, useNativeDriver: true, tension: 130, friction: 9 }).start()
       }
     }
     lastTap.current = now
   }
 
   return (
-    <View
-      style={{ width, height }}
-      onStartShouldSetResponder={() => false}
-      {...panResponder.panHandlers}
-    >
-      <Animated.View
-        style={{ transform: [{ translateX }, { translateY }, { scale }] }}
-        onTouchEnd={handlePress}
-      >
+    <View style={{ width, height }} {...panResponder.panHandlers} onTouchEnd={handleDoubleTap}>
+      <Animated.View style={{ transform: [{ translateX }, { translateY }, { scale }] }}>
         <Image source={{ uri }} style={{ width, height }} contentFit="contain" />
       </Animated.View>
     </View>

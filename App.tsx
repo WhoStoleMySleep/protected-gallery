@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, StyleSheet, AppState, AppStateStatus, Alert } from 'react-native'
+import { View, Text, StyleSheet, AppState, AppStateStatus, Alert, PanResponder } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
 import { File, Directory, Paths } from 'expo-file-system'
@@ -39,6 +39,11 @@ function AppContent() {
   const autoLockMs = useRef(5 * 60 * 1000)
   const fileKeyRef = useRef<Uint8Array | null>(null)
   const screenRef = useRef(screen)
+  const resetAutoLockRef = useRef<() => void>(() => {})
+  const activityResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponderCapture: () => { resetAutoLockRef.current(); return false },
+    onMoveShouldSetPanResponderCapture: () => { resetAutoLockRef.current(); return false },
+  }))
   useEffect(() => { screenRef.current = screen }, [screen])
   useEffect(() => { fileKeyRef.current = fileKey }, [fileKey])
 
@@ -59,6 +64,9 @@ function AppContent() {
       setFileKey(null)
     }, autoLockMs.current)
   }, [])
+
+  // Keep PanResponder capture handler pointing at latest resetAutoLock
+  useEffect(() => { resetAutoLockRef.current = resetAutoLock }, [resetAutoLock])
 
   const checkPendingShares = useCallback(async () => {
     if (!fileKeyRef.current) return
@@ -301,7 +309,7 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.bg} onTouchStart={resetAutoLock}>
+      <View style={styles.bg} {...activityResponder.current.panHandlers}>
         {/* Все вкладки всегда смонтированы — скрываем через display:none */}
         <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
           <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
