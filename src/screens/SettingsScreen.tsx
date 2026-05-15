@@ -6,7 +6,8 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout } from '../storage/settings'
+import { Switch } from 'react-native'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled } from '../storage/settings'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
@@ -31,6 +32,7 @@ interface Props {
   onSafeModeSetup: () => void
   vaultMode: 'real' | 'safe'
   onAutoLockChange?: (t: AutoLockTimeout) => void
+  onPanicShakeChange?: (enabled: boolean) => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -71,18 +73,26 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   themeBtnActive: { backgroundColor: c.accent },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
   const [autoLock, setAutoLockState] = useState<AutoLockTimeout>(5)
+  const [panicShake, setPanicShakeState] = useState(false)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
     getAutoLockTimeout().then(setAutoLockState)
+    getPanicShakeEnabled().then(setPanicShakeState)
   }, [])
+
+  const changePanicShake = async (val: boolean) => {
+    setPanicShakeState(val)
+    await setPanicShakeEnabled(val)
+    onPanicShakeChange?.(val)
+  }
 
   const changeAutoLock = async (t: AutoLockTimeout) => {
     setAutoLockState(t)
@@ -251,6 +261,21 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
           )}
+          <View style={styles.row}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="alert-circle-outline" size={20} color={colors.subtext} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Блокировка встряской</Text>
+              <Text style={styles.rowDesc}>Резко встряхните телефон, чтобы мгновенно заблокировать сейф</Text>
+            </View>
+            <Switch
+              value={panicShake}
+              onValueChange={changePanicShake}
+              trackColor={{ false: colors.border, true: colors.accentDim }}
+              thumbColor={panicShake ? colors.accent : colors.subtext}
+            />
+          </View>
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="timer-outline" size={20} color={colors.subtext} />

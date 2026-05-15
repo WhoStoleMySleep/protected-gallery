@@ -35,3 +35,14 @@ export const getAutoLockTimeout = async (): Promise<AutoLockTimeout> => {
 export const setAutoLockTimeout = async (t: AutoLockTimeout): Promise<void> => {
   await AsyncStorage.setItem(AUTO_LOCK_KEY, String(t))
 }
+
+const PANIC_SHAKE_KEY = 'vault:settings:panicShake'
+
+export const getPanicShakeEnabled = async (): Promise<boolean> => {
+  const raw = await AsyncStorage.getItem(PANIC_SHAKE_KEY)
+  return raw === 'true'
+}
+
+export const setPanicShakeEnabled = async (enabled: boolean): Promise<void> => {
+  await AsyncStorage.setItem(PANIC_SHAKE_KEY, String(enabled))
+}

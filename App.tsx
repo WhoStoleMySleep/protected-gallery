@@ -9,7 +9,8 @@ import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore, saveFile } from './src/storage/metadata'
 import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
-import { getAutoLockTimeout, AutoLockTimeout } from './src/storage/settings'
+import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled } from './src/storage/settings'
+import { Accelerometer } from 'expo-sensors'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
 import { PinEntryScreen } from './src/screens/PinEntryScreen'
@@ -39,6 +40,8 @@ function AppContent() {
   const autoLockMs = useRef(5 * 60 * 1000)
   const fileKeyRef = useRef<Uint8Array | null>(null)
   const screenRef = useRef(screen)
+  const [panicShakeEnabled, setPanicShakeEnabled] = useState(false)
+  const lockRef = useRef<() => void>(() => {})
   const resetAutoLockRef = useRef<() => void>(() => {})
   const activityResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponderCapture: () => { resetAutoLockRef.current(); return false },
@@ -50,7 +53,25 @@ function AppContent() {
   useEffect(() => {
     init()
     getAutoLockTimeout().then(t => { autoLockMs.current = t === 0 ? 0 : t * 60 * 1000 })
+    getPanicShakeEnabled().then(setPanicShakeEnabled)
   }, [])
+
+  // Shake-to-lock
+  useEffect(() => {
+    if (!panicShakeEnabled || !fileKey) return
+    let count = 0
+    Accelerometer.setUpdateInterval(80)
+    const sub = Accelerometer.addListener(({ x, y, z }) => {
+      const mag = Math.sqrt(x * x + y * y + z * z)
+      if (mag > 2.5) {
+        count++
+        if (count >= 4) { lockRef.current(); count = 0 }
+      } else {
+        count = 0
+      }
+    })
+    return () => sub.remove()
+  }, [panicShakeEnabled, fileKey])
 
   const resetAutoLock = useCallback(() => {
     if (autoLockTimer.current) clearTimeout(autoLockTimer.current)
@@ -185,12 +206,14 @@ function AppContent() {
     }
   }
 
-  const lock = () => {
+  const lock = useCallback(() => {
     if (autoLockTimer.current) { clearTimeout(autoLockTimer.current); autoLockTimer.current = null }
     setFileKey(null)
     setVaultMode('real')
     setScreen({ name: 'pinEntry' })
-  }
+  }, [])
+
+  useEffect(() => { lockRef.current = lock }, [lock])
 
   const openViewer = (fileIds: string[], index: number) => {
     const name = screen.name
@@ -310,28 +333,30 @@ function AppContent() {
   return (
     <SafeAreaProvider>
       <View style={styles.bg} {...activityResponder.current.panHandlers}>
-        {/* Все вкладки всегда смонтированы — скрываем через display:none */}
-        <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
-          <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
-        </View>
-        <View style={[styles.fill, tab !== 'import' && styles.hidden]}>
-          <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
-        </View>
-        <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
-          <SettingsScreen
-            onLock={lock}
-            onResetComplete={() => setScreen({ name: 'pinSetup' })}
-            onChangePin={() => setScreen({ name: 'changePin' })}
-            onAllMedia={() => setScreen({ name: 'allMedia' })}
-            onTrash={() => setScreen({ name: 'trash' })}
-            onArchive={() => setScreen({ name: 'archive' })}
-            onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
-            vaultMode={vaultMode}
-            onAutoLockChange={(t: AutoLockTimeout) => {
-              autoLockMs.current = t === 0 ? 0 : t * 60 * 1000
-              resetAutoLock()
-            }}
-          />
+        <View style={styles.fill}>
+          <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
+            <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
+          </View>
+          <View style={[styles.fill, tab !== 'import' && styles.hidden]}>
+            <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
+          </View>
+          <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
+            <SettingsScreen
+              onLock={lock}
+              onResetComplete={() => setScreen({ name: 'pinSetup' })}
+              onChangePin={() => setScreen({ name: 'changePin' })}
+              onAllMedia={() => setScreen({ name: 'allMedia' })}
+              onTrash={() => setScreen({ name: 'trash' })}
+              onArchive={() => setScreen({ name: 'archive' })}
+              onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
+              vaultMode={vaultMode}
+              onAutoLockChange={(t: AutoLockTimeout) => {
+                autoLockMs.current = t === 0 ? 0 : t * 60 * 1000
+                resetAutoLock()
+              }}
+              onPanicShakeChange={setPanicShakeEnabled}
+            />
+          </View>
         </View>
         {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}
 
