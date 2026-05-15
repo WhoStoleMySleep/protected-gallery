@@ -2,7 +2,7 @@
 
 A personal encrypted media vault for Android. Stores photos, videos and GIFs locally on-device — fully offline, protected by PIN, optionally by biometrics.
 
-> **Note:** This project was built quickly and for personal use. The code is functional but not production-grade, the architecture is straightforward, and the commit history is a mess. It does its job.
+> **Note:** This project was built quickly and for personal use. The code is functional but not production-grade, the architecture is straightforward. It does its job.
 
 <p align="center">
   <img src="screenshots/media.jpg" width="260" alt="All Media" />
