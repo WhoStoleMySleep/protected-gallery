@@ -4,6 +4,17 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 
 > **Note:** This project was built quickly and for personal use. The code is functional but not production-grade, the architecture is straightforward, and the commit history is a mess. It does its job.
 
+<p align="center">
+  <img src="screenshots/media.jpg" width="260" alt="All Media" />
+  &nbsp;
+  <img src="screenshots/import.jpg" width="260" alt="Import" />
+  &nbsp;
+  <img src="screenshots/settings.jpg" width="260" alt="Settings" />
+</p>
+<p align="center">
+  <sub>All Media &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Import &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Settings</sub>
+</p>
+
 ## Features
 
 - AES-256-GCM encryption — every file encrypted individually before being written to disk
