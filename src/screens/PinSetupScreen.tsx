@@ -3,7 +3,8 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PinPad } from '../components/PinPad'
 import { setupPin } from '../crypto/pin'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   onComplete: () => void
@@ -11,7 +12,15 @@ interface Props {
 
 type Step = 'enter' | 'confirm'
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+})
+
 export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [step, setStep] = useState<Step>('enter')
   const [firstPin, setFirstPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +51,7 @@ export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     )
   }
@@ -65,8 +74,3 @@ export const PinSetupScreen: React.FC<Props> = ({ onComplete }) => {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-})

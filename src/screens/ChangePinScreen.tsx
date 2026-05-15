@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PinPad } from '../components/PinPad'
 import { verifyPin, setupPin } from '../crypto/pin'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   onComplete: () => void
@@ -12,7 +13,22 @@ interface Props {
 
 type Step = 'verify' | 'newPin' | 'confirmNew'
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  cancel: { color: c.accent, fontSize: 16 },
+  title: { fontSize: 17, fontWeight: '700', color: c.text },
+})
+
 export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [step, setStep] = useState<Step>('verify')
   const [newPin, setNewPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +69,7 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
   const handlers = { verify: handleVerify, newPin: handleNewPin, confirmNew: handleConfirmNew }
 
   if (loading) {
-    return <View style={styles.loading}><ActivityIndicator color={COLORS.accent} size="large" /></View>
+    return <View style={styles.loading}><ActivityIndicator color={colors.accent} size="large" /></View>
   }
 
   return (
@@ -67,15 +83,3 @@ export const ChangePinScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  cancel: { color: COLORS.accent, fontSize: 16 },
-  title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-})

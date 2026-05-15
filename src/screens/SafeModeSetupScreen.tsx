@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { PinPad } from '../components/PinPad'
 import { setupSafePin, safePinExists, deleteSafePin } from '../crypto/pin'
 import { generateAndStoreSafeKey, deleteSafeKey } from '../crypto/keys'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   onComplete: () => void
@@ -14,7 +15,37 @@ interface Props {
 
 type Step = 'status' | 'newPin' | 'confirmPin'
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  cancel: { color: c.accent, fontSize: 16 },
+  title: { fontSize: 17, fontWeight: '700', color: c.text },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  icon: { marginBottom: 16 },
+  heading: { fontSize: 22, fontWeight: '700', color: c.text, marginBottom: 12 },
+  desc: { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  primaryBtn: {
+    backgroundColor: c.accent, paddingHorizontal: 40, paddingVertical: 14,
+    borderRadius: 12, marginBottom: 12, width: '100%', alignItems: 'center',
+  },
+  primaryBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  dangerBtn: {
+    backgroundColor: c.card, paddingHorizontal: 40, paddingVertical: 14,
+    borderRadius: 12, width: '100%', alignItems: 'center',
+    borderWidth: 1, borderColor: c.danger,
+  },
+  dangerBtnTxt: { color: c.danger, fontSize: 16, fontWeight: '600' },
+})
+
 export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [step, setStep] = useState<Step>('status')
   const [isConfigured, setIsConfigured] = useState(false)
   const [newPin, setNewPin] = useState('')
@@ -76,7 +107,7 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
   if (loading || saving) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     )
   }
@@ -123,7 +154,7 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
       </View>
 
       <View style={styles.body}>
-        <Ionicons name="shield-half-outline" size={56} color={COLORS.accent} style={styles.icon} />
+        <Ionicons name="shield-half-outline" size={56} color={colors.accent} style={styles.icon} />
 
         {!isConfigured ? (
           <>
@@ -154,30 +185,3 @@ export const SafeModeSetupScreen: React.FC<Props> = ({ onComplete, onCancel }) =
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  cancel: { color: COLORS.accent, fontSize: 16 },
-  title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  icon: { marginBottom: 16 },
-  heading: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-  desc: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
-  primaryBtn: {
-    backgroundColor: COLORS.accent, paddingHorizontal: 40, paddingVertical: 14,
-    borderRadius: 12, marginBottom: 12, width: '100%', alignItems: 'center',
-  },
-  primaryBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  dangerBtn: {
-    backgroundColor: COLORS.card, paddingHorizontal: 40, paddingVertical: 14,
-    borderRadius: 12, width: '100%', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.danger,
-  },
-  dangerBtnTxt: { color: COLORS.danger, fontSize: 16, fontWeight: '600' },
-})

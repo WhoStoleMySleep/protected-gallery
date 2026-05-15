@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 export interface SelectionAction {
   label: string
@@ -15,7 +16,23 @@ interface Props {
   actions: SelectionAction[]
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: c.card, paddingHorizontal: 16, paddingVertical: 14,
+    borderTopWidth: 1, borderTopColor: c.border,
+  },
+  side: { minWidth: 80 },
+  actionsRow: { flexDirection: 'row', gap: 20, justifyContent: 'flex-end' },
+  cancelTxt: { color: c.accent, fontSize: 15 },
+  count: { color: c.text, fontSize: 14, fontWeight: '700' },
+  actionTxt: { color: c.accent, fontSize: 15, fontWeight: '600' },
+  actionDanger: { color: c.danger },
+})
+
 export const SelectionBar: React.FC<Props> = ({ count, onCancel, actions }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
   const { bottom } = useSafeAreaInsets()
   return (
     <View style={[styles.container, { paddingBottom: Math.max(bottom, 16) }]}>
@@ -33,17 +50,3 @@ export const SelectionBar: React.FC<Props> = ({ count, onCancel, actions }) => {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.card, paddingHorizontal: 16, paddingVertical: 14,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-  },
-  side: { minWidth: 80 },
-  actionsRow: { flexDirection: 'row', gap: 20, justifyContent: 'flex-end' },
-  cancelTxt: { color: COLORS.accent, fontSize: 15 },
-  count: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
-  actionTxt: { color: COLORS.accent, fontSize: 15, fontWeight: '600' },
-  actionDanger: { color: COLORS.danger },
-})

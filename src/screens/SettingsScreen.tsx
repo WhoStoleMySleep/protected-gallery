@@ -6,9 +6,10 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode } from '../storage/settings'
 import { clearDecryptedCache } from '../storage/decryptedCache'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
 
@@ -23,7 +24,48 @@ interface Props {
   vaultMode: 'real' | 'safe'
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  content: { padding: 16, gap: 20 },
+  title: { fontSize: 26, fontWeight: '800', color: c.text, marginBottom: 4 },
+  section: { backgroundColor: c.card, borderRadius: 12, overflow: 'hidden' },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: c.subtext, paddingHorizontal: 16, paddingVertical: 8, letterSpacing: 0.5 },
+  row: {
+    flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
+    borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  rowNoBorder: { borderBottomWidth: 0 },
+  rowIconWrap: { width: 32, alignItems: 'center' },
+  rowBody: { flex: 1 },
+  rowTitle: { fontSize: 15, fontWeight: '600', color: c.text, marginBottom: 2 },
+  rowDesc: { fontSize: 12, color: c.subtext, lineHeight: 17 },
+  aboutBtn: { alignItems: 'center', padding: 12 },
+  aboutText: { color: c.subtext, fontSize: 13 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 4 },
+  limitInput: {
+    backgroundColor: c.background, borderWidth: 1, borderColor: c.border,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    color: c.text, fontSize: 16, fontWeight: '700', width: 80, textAlign: 'center',
+  },
+  limitInputLabel: { color: c.subtext, fontSize: 13 },
+  limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  limitBtn: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: c.background, borderWidth: 1, borderColor: c.border,
+  },
+  limitBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
+  limitTxt: { color: c.subtext, fontSize: 14, fontWeight: '600' },
+  limitTxtActive: { color: '#fff' },
+  themeSelector: { flexDirection: 'row', gap: 6 },
+  themeBtn: { padding: 8, borderRadius: 8, backgroundColor: c.cardAlt },
+  themeBtnActive: { backgroundColor: c.accent },
+})
+
 export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode }) => {
+  const { colors, mode, setMode } = useTheme()
+  const styles = makeStyles(colors)
+
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
 
@@ -85,8 +127,8 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
-        <Text style={{ color: COLORS.subtext, marginTop: 12 }}>Удаление данных...</Text>
+        <ActivityIndicator color={colors.accent} size="large" />
+        <Text style={{ color: colors.subtext, marginTop: 12 }}>Удаление данных...</Text>
       </View>
     )
   }
@@ -109,7 +151,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
                   onChangeText={handleLimitInput}
                   keyboardType="number-pad"
                   placeholder="Число"
-                  placeholderTextColor={COLORS.subtext}
+                  placeholderTextColor={colors.subtext}
                   maxLength={4}
                   returnKeyType="done"
                 />
@@ -136,33 +178,33 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
           <Text style={styles.sectionLabel}>МЕДИАТЕКА</Text>
           <TouchableOpacity style={styles.row} onPress={onAllMedia}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="grid-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="grid-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Все медиа</Text>
               <Text style={styles.rowDesc}>Все активные файлы в сейфе</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
+            <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.row} onPress={onArchive}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="archive-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="archive-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Архив</Text>
               <Text style={styles.rowDesc}>Файлы не в подборке, хранятся бессрочно</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
+            <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onTrash}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="trash-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Корзина</Text>
               <Text style={styles.rowDesc}>Автоочистка через 30 дней</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
+            <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
           </TouchableOpacity>
         </View>
 
@@ -171,30 +213,30 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
           {vaultMode === 'real' && (
             <TouchableOpacity style={styles.row} onPress={onChangePin}>
               <View style={styles.rowIconWrap}>
-                <Ionicons name="key-outline" size={20} color={COLORS.subtext} />
+                <Ionicons name="key-outline" size={20} color={colors.subtext} />
               </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>Сменить PIN-код</Text>
                 <Text style={styles.rowDesc}>Изменить текущий PIN-код сейфа</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
+              <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
           )}
           {vaultMode === 'real' && (
             <TouchableOpacity style={styles.row} onPress={onSafeModeSetup}>
               <View style={styles.rowIconWrap}>
-                <Ionicons name="shield-half-outline" size={20} color={COLORS.subtext} />
+                <Ionicons name="shield-half-outline" size={20} color={colors.subtext} />
               </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>Безопасный режим</Text>
                 <Text style={styles.rowDesc}>Отдельное хранилище с другим PIN-кодом</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
+              <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
           )}
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onLock}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="lock-closed-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="lock-closed-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Заблокировать сейф</Text>
@@ -204,10 +246,37 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ВНЕШНИЙ ВИД</Text>
+          <View style={[styles.row, styles.rowNoBorder]}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="contrast-outline" size={20} color={colors.subtext} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Тема</Text>
+            </View>
+            <View style={styles.themeSelector}>
+              {(['system', 'light', 'dark'] as ThemeMode[]).map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.themeBtn, mode === m && styles.themeBtnActive]}
+                  onPress={() => setMode(m)}
+                >
+                  <Ionicons
+                    name={m === 'system' ? 'phone-portrait-outline' : m === 'light' ? 'sunny-outline' : 'moon-outline'}
+                    size={16}
+                    color={mode === m ? '#fff' : colors.subtext}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>ИНФОРМАЦИЯ</Text>
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Шифрование</Text>
@@ -216,7 +285,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
           </View>
           <View style={[styles.row, styles.rowNoBorder]}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="cloud-offline-outline" size={20} color={COLORS.subtext} />
+              <Ionicons name="cloud-offline-outline" size={20} color={colors.subtext} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>Полностью офлайн</Text>
@@ -229,10 +298,10 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
           <Text style={styles.sectionLabel}>ОПАСНАЯ ЗОНА</Text>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={confirmDeleteAll}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </View>
             <View style={styles.rowBody}>
-              <Text style={[styles.rowTitle, { color: COLORS.danger }]}>Удалить все данные</Text>
+              <Text style={[styles.rowTitle, { color: colors.danger }]}>Удалить все данные</Text>
               <Text style={styles.rowDesc}>Необратимо. Файлы из галереи не затрагиваются.</Text>
             </View>
           </TouchableOpacity>
@@ -245,38 +314,3 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  content: { padding: 16, gap: 20 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  section: { backgroundColor: COLORS.card, borderRadius: 12, overflow: 'hidden' },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.subtext, paddingHorizontal: 16, paddingVertical: 8, letterSpacing: 0.5 },
-  row: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  rowNoBorder: { borderBottomWidth: 0 },
-  rowIconWrap: { width: 32, alignItems: 'center' },
-  rowBody: { flex: 1 },
-  rowTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginBottom: 2 },
-  rowDesc: { fontSize: 12, color: COLORS.subtext, lineHeight: 17 },
-  aboutBtn: { alignItems: 'center', padding: 12 },
-  aboutText: { color: COLORS.subtext, fontSize: 13 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 4 },
-  limitInput: {
-    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
-    color: COLORS.text, fontSize: 16, fontWeight: '700', width: 80, textAlign: 'center',
-  },
-  limitInputLabel: { color: COLORS.subtext, fontSize: 13 },
-  limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  limitBtn: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
-    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
-  },
-  limitBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  limitTxt: { color: COLORS.subtext, fontSize: 14, fontWeight: '600' },
-  limitTxtActive: { color: '#fff' },
-})

@@ -6,7 +6,8 @@ import type { VaultFile } from '../types'
 import { getMediaKind, formatDuration } from '../utils/media'
 import { decryptToTemp } from '../storage/vault'
 import { limit } from '../utils/concurrency'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 const uriCache = new Map<string, string>()
 
@@ -20,7 +21,41 @@ interface Props {
   selectionMode?: boolean
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { borderRadius: 6, overflow: 'hidden', backgroundColor: c.card },
+  placeholder: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.card,
+  },
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 6, left: 6, right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  videoIcon: { textShadowColor: '#000', textShadowRadius: 3 },
+  duration: { color: '#fff', fontSize: 10, fontWeight: '700', textShadowColor: '#000', textShadowRadius: 3 },
+  fileName: { color: c.subtext, fontSize: 10, textAlign: 'center', paddingHorizontal: 4, marginTop: 4 },
+  selectionBadge: {
+    position: 'absolute', top: 5, right: 5,
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  selectionBadgeOn: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+})
+
 export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, onLongPress, selected, selectionMode }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const cached = uriCache.get(file.id)
   const [uri, setUri] = useState<string | null>(cached ?? null)
   const [loading, setLoading] = useState(!cached)
@@ -58,13 +93,13 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
     >
       {loading && (
         <View style={styles.placeholder}>
-          <ActivityIndicator color={COLORS.accent} size="small" />
+          <ActivityIndicator color={colors.accent} size="small" />
         </View>
       )}
 
       {!loading && failed && (
         <View style={styles.placeholder}>
-          <Ionicons name="warning-outline" size={28} color={COLORS.subtext} />
+          <Ionicons name="warning-outline" size={28} color={colors.subtext} />
         </View>
       )}
 
@@ -86,7 +121,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
 
       {!loading && !failed && kind === 'unknown' && (
         <View style={styles.placeholder}>
-          <Ionicons name="document-outline" size={28} color={COLORS.subtext} />
+          <Ionicons name="document-outline" size={28} color={colors.subtext} />
           <Text style={styles.fileName} numberOfLines={2}>{file.originalName}</Text>
         </View>
       )}
@@ -101,34 +136,3 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
 }
 
 export const clearUriCache = () => uriCache.clear()
-
-const styles = StyleSheet.create({
-  container: { borderRadius: 6, overflow: 'hidden', backgroundColor: COLORS.card },
-  placeholder: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.card,
-  },
-  videoOverlay: {
-    position: 'absolute',
-    bottom: 6, left: 6, right: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  videoIcon: { textShadowColor: '#000', textShadowRadius: 3 },
-  duration: { color: '#fff', fontSize: 10, fontWeight: '700', textShadowColor: '#000', textShadowRadius: 3 },
-  fileName: { color: COLORS.subtext, fontSize: 10, textAlign: 'center', paddingHorizontal: 4, marginTop: 4 },
-  selectionBadge: {
-    position: 'absolute', top: 5, right: 5,
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  selectionBadgeOn: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-})

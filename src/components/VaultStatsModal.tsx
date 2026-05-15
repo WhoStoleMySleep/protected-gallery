@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { getAllFiles } from '../storage/metadata'
 import { getMediaKind } from '../utils/media'
 import { formatFileSize } from '../utils/media'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 import type { VaultFile } from '../types'
 
 interface Stats {
@@ -41,7 +42,44 @@ interface Props {
   onClose: () => void
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: c.overlay,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: c.card,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 24, paddingBottom: 40,
+  },
+  title: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 20 },
+  totalRow: {
+    flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16,
+  },
+  totalNum: { fontSize: 42, fontWeight: '800', color: c.accent },
+  totalLabel: { fontSize: 16, color: c.subtext, flex: 1 },
+  totalSize: { fontSize: 15, color: c.subtextLight, fontWeight: '600' },
+  divider: { height: 1, backgroundColor: c.border, marginBottom: 16 },
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, gap: 10,
+    borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  rowIcon: { width: 28 },
+  rowLabel: { flex: 1, fontSize: 15, color: c.text, fontWeight: '500' },
+  rowCount: { fontSize: 14, color: c.subtextLight, marginRight: 8 },
+  rowSize: { fontSize: 14, color: c.accent, fontWeight: '600', minWidth: 72, textAlign: 'right' },
+  closeBtn: {
+    marginTop: 20, alignItems: 'center', paddingVertical: 14,
+    backgroundColor: c.background, borderRadius: 12,
+  },
+  closeTxt: { color: c.text, fontWeight: '600', fontSize: 15 },
+})
+
 export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -60,7 +98,7 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
           <Text style={styles.title}>Файлы в сейфе</Text>
 
           {loading || !stats ? (
-            <ActivityIndicator color={COLORS.accent} style={{ marginVertical: 24 }} />
+            <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
           ) : (
             <>
               <View style={styles.totalRow}>
@@ -78,7 +116,7 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
                 { label: 'Другое', icon: 'document-outline', data: stats.other },
               ] as const).filter(r => r.data.count > 0).map(row => (
                 <View key={row.label} style={styles.row}>
-                  <Ionicons name={row.icon} size={20} color={COLORS.subtext} style={styles.rowIcon} />
+                  <Ionicons name={row.icon} size={20} color={colors.subtext} style={styles.rowIcon} />
                   <Text style={styles.rowLabel}>{row.label}</Text>
                   <Text style={styles.rowCount}>{row.data.count} шт.</Text>
                   <Text style={styles.rowSize}>{formatFileSize(row.data.size)}</Text>
@@ -95,37 +133,3 @@ export const VaultStatsModal: React.FC<Props> = ({ visible, onClose }) => {
     </Modal>
   )
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1, backgroundColor: COLORS.overlay,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 24, paddingBottom: 40,
-  },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 20 },
-  totalRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16,
-  },
-  totalNum: { fontSize: 42, fontWeight: '800', color: COLORS.accent },
-  totalLabel: { fontSize: 16, color: COLORS.subtext, flex: 1 },
-  totalSize: { fontSize: 15, color: COLORS.subtextLight, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 16 },
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, gap: 10,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  rowIcon: { width: 28 },
-  rowLabel: { flex: 1, fontSize: 15, color: COLORS.text, fontWeight: '500' },
-  rowCount: { fontSize: 14, color: COLORS.subtextLight, marginRight: 8 },
-  rowSize: { fontSize: 14, color: COLORS.accent, fontWeight: '600', minWidth: 72, textAlign: 'right' },
-  closeBtn: {
-    marginTop: 20, alignItems: 'center', paddingVertical: 14,
-    backgroundColor: COLORS.background, borderRadius: 12,
-  },
-  closeTxt: { color: COLORS.text, fontWeight: '600', fontSize: 15 },
-})

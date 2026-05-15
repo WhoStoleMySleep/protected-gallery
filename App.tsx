@@ -20,11 +20,12 @@ import { TrashScreen } from './src/screens/TrashScreen'
 import { ArchiveScreen } from './src/screens/ArchiveScreen'
 import { SafeModeSetupScreen } from './src/screens/SafeModeSetupScreen'
 import { TabBar } from './src/components/TabBar'
+import { ThemeProvider } from './src/context/ThemeContext'
 
 import type { AppScreen, MainTab, ViewerReturn, VaultMode } from './src/types'
-import { COLORS } from './src/theme'
+import { DARK_COLORS } from './src/theme'
 
-export default function App() {
+function AppContent() {
   const [screen, setScreen] = useState<AppScreen>({ name: 'loading' })
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null)
   const [vaultMode, setVaultMode] = useState<VaultMode>('real')
@@ -272,8 +273,16 @@ export default function App() {
   )
 }
 
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  )
+}
+
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: COLORS.background },
+  bg: { flex: 1, backgroundColor: DARK_COLORS.background },
   fill: { flex: 1 },
   hidden: { display: 'none' },
   errorScreen: {

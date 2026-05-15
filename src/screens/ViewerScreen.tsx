@@ -13,7 +13,8 @@ import { decryptToTemp } from '../storage/vault'
 import { limit } from '../utils/concurrency'
 import { getMediaKind, formatFileSize, formatDate, formatDuration } from '../utils/media'
 import type { VaultFile } from '../types'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 const { width, height } = Dimensions.get('window')
 const DISMISS_THRESHOLD = 130
@@ -33,6 +34,30 @@ interface FileState {
   error: boolean
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
+  slide: { width, height, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
+  media: { width, height },
+  topBar: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  closeBtn: { padding: 10, minWidth: 44, alignItems: 'center' },
+  closeTxt: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  counter: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  infoBtn: { padding: 10, minWidth: 44, alignItems: 'center' },
+  infoTxt: { color: '#fff', fontSize: 18 },
+  infoOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    padding: 20, paddingBottom: 40, gap: 4,
+  },
+  infoName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  infoMeta: { color: c.subtextLight, fontSize: 13 },
+})
+
 const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible }) => {
   const player = useVideoPlayer({ uri }, p => {
     p.loop = true
@@ -47,7 +72,7 @@ const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible 
   return (
     <VideoView
       player={player}
-      style={styles.media}
+      style={{ width, height }}
       contentFit="contain"
       nativeControls
     />
@@ -57,6 +82,9 @@ const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible 
 const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean; priority: 'high' | 'normal' }> = ({
   fileId, fileKey, visible, priority,
 }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [state, setState] = useState<FileState>({ file: null, uri: null, loading: true, error: false })
 
   useEffect(() => {
@@ -82,7 +110,7 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   if (state.loading) {
     return (
       <View style={styles.slide}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     )
   }
@@ -90,8 +118,8 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   if (state.error || !state.file || !state.uri) {
     return (
       <View style={styles.slide}>
-        <Ionicons name="warning-outline" size={32} color={COLORS.subtext} />
-        <Text style={{ color: COLORS.subtext, marginTop: 8 }}>Ошибка загрузки</Text>
+        <Ionicons name="warning-outline" size={32} color={colors.subtext} />
+        <Text style={{ color: colors.subtext, marginTop: 8 }}>Ошибка загрузки</Text>
       </View>
     )
   }
@@ -116,8 +144,8 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
 
   return (
     <View style={styles.slide}>
-      <Ionicons name="document-outline" size={48} color={COLORS.subtext} />
-      <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
+      <Ionicons name="document-outline" size={48} color={colors.subtext} />
+      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
         {state.file.originalName}
       </Text>
     </View>
@@ -125,6 +153,9 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
 }
 
 export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, onClose }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
   const [currentFile, setCurrentFile] = useState<VaultFile | null>(null)
@@ -244,27 +275,3 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
     </Animated.View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
-  slide: { width, height, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
-  media: { width, height },
-  topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', paddingHorizontal: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  closeBtn: { padding: 10, minWidth: 44, alignItems: 'center' },
-  closeTxt: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  counter: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  infoBtn: { padding: 10, minWidth: 44, alignItems: 'center' },
-  infoTxt: { color: '#fff', fontSize: 18 },
-  infoOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    padding: 20, paddingBottom: 40, gap: 4,
-  },
-  infoName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  infoMeta: { color: COLORS.subtextLight, fontSize: 13 },
-})

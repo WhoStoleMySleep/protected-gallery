@@ -12,7 +12,8 @@ import { getDailyLimit } from '../storage/settings'
 import { selectDaily, getTodayKey } from '../utils/randomizer'
 import { formatDate } from '../utils/media'
 import type { VaultFile } from '../types'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -24,7 +25,24 @@ interface Props {
   onOpenViewer: (fileIds: string[], index: number) => void
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  header: { paddingHorizontal: 16, paddingVertical: 12 },
+  title: { fontSize: 26, fontWeight: '800', color: c.text },
+  date: { fontSize: 13, color: c.subtext, marginTop: 2 },
+  count: { fontSize: 12, color: c.accent, marginTop: 4, fontWeight: '600' },
+  grid: { padding: GAP / 2 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyIcon: { fontSize: 56, marginBottom: 16 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 20 },
+})
+
 export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -88,7 +106,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
+    return <View style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></View>
   }
 
   if (loadError) {
@@ -125,7 +143,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
           keyExtractor={f => f.id}
           numColumns={COLS}
           contentContainerStyle={styles.grid}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
           renderItem={({ item, index }) => (
             <View style={{ margin: GAP / 2 }}>
               <MediaThumbnail
@@ -155,17 +173,3 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 16, paddingVertical: 12 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.text },
-  date: { fontSize: 13, color: COLORS.subtext, marginTop: 2 },
-  count: { fontSize: 12, color: COLORS.accent, marginTop: 4, fontWeight: '600' },
-  grid: { padding: GAP / 2 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyIcon: { fontSize: 56, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 20 },
-})

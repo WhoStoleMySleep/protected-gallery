@@ -9,7 +9,8 @@ import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
 import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
 import type { VaultFile } from '../types'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 const { width } = Dimensions.get('window')
 const COLS = 3
@@ -22,7 +23,28 @@ interface Props {
   onBack: () => void
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+  },
+  backBtn: { minWidth: 64 },
+  backTxt: { color: c.accent, fontSize: 16, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '700', color: c.text },
+  count: { fontSize: 13, color: c.subtext, minWidth: 64, textAlign: 'right' },
+  grid: { padding: GAP / 2 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyIcon: { fontSize: 56, marginBottom: 16 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 20 },
+})
+
 export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -85,7 +107,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.accent} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></View>
       ) : loadError ? (
         <View style={styles.center}>
           <Text style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center', padding: 24 }}>
@@ -104,7 +126,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
           keyExtractor={f => f.id}
           numColumns={COLS}
           contentContainerStyle={styles.grid}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
           renderItem={({ item, index }) => (
             <View style={{ margin: GAP / 2 }}>
               <MediaThumbnail
@@ -134,21 +156,3 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
-  },
-  backBtn: { minWidth: 64 },
-  backTxt: { color: COLORS.accent, fontSize: 16, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  count: { fontSize: 13, color: COLORS.subtext, minWidth: 64, textAlign: 'right' },
-  grid: { padding: GAP / 2 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyIcon: { fontSize: 56, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: COLORS.subtext, textAlign: 'center', lineHeight: 20 },
-})

@@ -5,14 +5,31 @@ import * as LocalAuthentication from 'expo-local-authentication'
 import { PinPad } from '../components/PinPad'
 import { checkPinMode } from '../crypto/pin'
 import type { VaultMode } from '../types'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   onUnlock: (mode: VaultMode) => void
   biometricsAvailable: boolean
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  bioBtn: {
+    position: 'absolute',
+    bottom: -16,
+    left: -16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'transparent',
+  },
+})
+
 export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [attempts, setAttempts] = useState(0)
@@ -63,16 +80,3 @@ export const PinEntryScreen: React.FC<Props> = ({ onUnlock, biometricsAvailable 
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  bioBtn: {
-    position: 'absolute',
-    bottom: -16,
-    left: -16,
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'transparent',
-  },
-})

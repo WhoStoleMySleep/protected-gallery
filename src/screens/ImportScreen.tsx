@@ -11,7 +11,8 @@ import { encryptAndSave, generateAndEncryptThumb } from '../storage/vault'
 import { saveFile, getAllFileIds } from '../storage/metadata'
 import { VaultStatsModal } from '../components/VaultStatsModal'
 import { formatFileSize } from '../utils/media'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 import type { VaultFile } from '../types'
 
 interface Props {
@@ -25,7 +26,41 @@ interface Progress {
   name: string
 }
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  content: { padding: 16, gap: 16 },
+  title: { fontSize: 26, fontWeight: '800', color: c.text },
+  subtitle: { fontSize: 14, color: c.subtext, lineHeight: 20 },
+  statsCard: {
+    backgroundColor: c.card, borderRadius: 12, padding: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  statsLabel: { fontSize: 15, color: c.subtext },
+  statsValue: { fontSize: 28, fontWeight: '800', color: c.accent },
+  importBtn: {
+    backgroundColor: c.card, borderRadius: 16, padding: 32,
+    alignItems: 'center', borderWidth: 2, borderColor: c.accent, borderStyle: 'dashed',
+  },
+  importIcon: { marginBottom: 8 },
+  importText: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 4 },
+  importHint: { fontSize: 13, color: c.subtext },
+  progressCard: {
+    backgroundColor: c.card, borderRadius: 12, padding: 20, gap: 12, alignItems: 'center',
+  },
+  progressText: { color: c.subtext, fontSize: 13, textAlign: 'center' },
+  progressBar: { height: 4, backgroundColor: c.cardAlt, borderRadius: 2, width: '100%' },
+  progressFill: { height: '100%', backgroundColor: c.accent, borderRadius: 2 },
+  infoCard: { backgroundColor: c.card, borderRadius: 12, padding: 16, gap: 10 },
+  infoTitle: { fontSize: 14, fontWeight: '700', color: c.text, marginBottom: 4 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoIcon: {},
+  infoItem: { fontSize: 13, color: c.subtext, lineHeight: 19, flex: 1 },
+})
+
 export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [totalInVault, setTotalInVault] = useState(0)
@@ -135,7 +170,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
 
         {importing ? (
           <View style={styles.progressCard}>
-            <ActivityIndicator color={COLORS.accent} size="small" />
+            <ActivityIndicator color={colors.accent} size="small" />
             <Text style={styles.progressText}>
               {progress
                 ? `Шифрование ${progress.current}/${progress.total}: ${progress.name}`
@@ -154,7 +189,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           </View>
         ) : (
           <TouchableOpacity style={styles.importBtn} onPress={pickAndImport}>
-            <Ionicons name="cloud-download-outline" size={40} color={COLORS.accent} style={styles.importIcon} />
+            <Ionicons name="cloud-download-outline" size={40} color={colors.accent} style={styles.importIcon} />
             <Text style={styles.importText}>Выбрать из галереи</Text>
             <Text style={styles.importHint}>Фото, видео, GIF</Text>
           </TouchableOpacity>
@@ -163,19 +198,19 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Как работает сейф</Text>
           <View style={styles.infoRow}>
-            <Ionicons name="lock-closed-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Ionicons name="lock-closed-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
             <Text style={styles.infoItem}>Шифрование AES-256-GCM</Text>
           </View>
           <View style={styles.infoRow}>
-            <Ionicons name="folder-open-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Ionicons name="folder-open-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
             <Text style={styles.infoItem}>Оригиналы в галерее не затрагиваются</Text>
           </View>
           <View style={styles.infoRow}>
-            <Ionicons name="shuffle-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Ionicons name="shuffle-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
             <Text style={styles.infoItem}>Каждый день — случайные 25 файлов</Text>
           </View>
           <View style={styles.infoRow}>
-            <Ionicons name="eye-off-outline" size={15} color={COLORS.subtext} style={styles.infoIcon} />
+            <Ionicons name="eye-off-outline" size={15} color={colors.subtext} style={styles.infoIcon} />
             <Text style={styles.infoItem}>Без PIN данные недоступны</Text>
           </View>
         </View>
@@ -184,34 +219,3 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 16, gap: 16 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.text },
-  subtitle: { fontSize: 14, color: COLORS.subtext, lineHeight: 20 },
-  statsCard: {
-    backgroundColor: COLORS.card, borderRadius: 12, padding: 20,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  statsLabel: { fontSize: 15, color: COLORS.subtext },
-  statsValue: { fontSize: 28, fontWeight: '800', color: COLORS.accent },
-  importBtn: {
-    backgroundColor: COLORS.card, borderRadius: 16, padding: 32,
-    alignItems: 'center', borderWidth: 2, borderColor: COLORS.accent, borderStyle: 'dashed',
-  },
-  importIcon: { marginBottom: 8 },
-  importText: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  importHint: { fontSize: 13, color: COLORS.subtext },
-  progressCard: {
-    backgroundColor: COLORS.card, borderRadius: 12, padding: 20, gap: 12, alignItems: 'center',
-  },
-  progressText: { color: COLORS.subtext, fontSize: 13, textAlign: 'center' },
-  progressBar: { height: 4, backgroundColor: COLORS.cardAlt, borderRadius: 2, width: '100%' },
-  progressFill: { height: '100%', backgroundColor: COLORS.accent, borderRadius: 2 },
-  infoCard: { backgroundColor: COLORS.card, borderRadius: 12, padding: 16, gap: 10 },
-  infoTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoIcon: {},
-  infoItem: { fontSize: 13, color: COLORS.subtext, lineHeight: 19, flex: 1 },
-})

@@ -7,7 +7,8 @@ import {
   Animated,
   Vibration,
 } from 'react-native'
-import { COLORS } from '../theme'
+import { Colors } from '../theme'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   title: string
@@ -20,6 +21,31 @@ interface Props {
 
 const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫']
 
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 32 },
+  title: { fontSize: 22, fontWeight: '700', color: c.text, marginBottom: 8, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: c.subtext, marginBottom: 32, textAlign: 'center' },
+  dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, marginTop: 16, justifyContent: 'center', maxWidth: 280 },
+  dotEmpty: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: c.subtext },
+  dotFilled: { width: 14, height: 14, borderRadius: 7, backgroundColor: c.accent },
+  error: { color: c.danger, fontSize: 13, marginBottom: 8 },
+  keypad: { flexDirection: 'row', flexWrap: 'wrap', width: 280, marginTop: 24 },
+  key: {
+    width: 80, height: 80, alignItems: 'center', justifyContent: 'center',
+    margin: 4, borderRadius: 40, backgroundColor: c.card,
+  },
+  keyEmpty: { backgroundColor: 'transparent' },
+  keyText: { fontSize: 24, fontWeight: '600', color: c.text },
+  keyBackspace: { fontSize: 20 },
+  confirmBtn: {
+    marginTop: 16, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12,
+  },
+  confirmActive: { backgroundColor: c.accent },
+  confirmInactive: { backgroundColor: c.card },
+  confirmText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  confirmTextInactive: { color: c.subtext },
+})
+
 export const PinPad: React.FC<Props> = ({
   title,
   subtitle,
@@ -28,6 +54,9 @@ export const PinPad: React.FC<Props> = ({
   minLength = 4,
   error,
 }) => {
+  const { colors } = useTheme()
+  const styles = makeStyles(colors)
+
   const [pin, setPin] = useState('')
   const shakeAnim = new Animated.Value(0)
 
@@ -102,28 +131,3 @@ export const PinPad: React.FC<Props> = ({
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 32 },
-  title: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: COLORS.subtext, marginBottom: 32, textAlign: 'center' },
-  dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, marginTop: 16, justifyContent: 'center', maxWidth: 280 },
-  dotEmpty: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: COLORS.subtext },
-  dotFilled: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.accent },
-  error: { color: COLORS.danger, fontSize: 13, marginBottom: 8 },
-  keypad: { flexDirection: 'row', flexWrap: 'wrap', width: 280, marginTop: 24 },
-  key: {
-    width: 80, height: 80, alignItems: 'center', justifyContent: 'center',
-    margin: 4, borderRadius: 40, backgroundColor: COLORS.card,
-  },
-  keyEmpty: { backgroundColor: 'transparent' },
-  keyText: { fontSize: 24, fontWeight: '600', color: COLORS.text },
-  keyBackspace: { fontSize: 20 },
-  confirmBtn: {
-    marginTop: 16, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12,
-  },
-  confirmActive: { backgroundColor: COLORS.accent },
-  confirmInactive: { backgroundColor: COLORS.card },
-  confirmText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  confirmTextInactive: { color: COLORS.subtext },
-})
