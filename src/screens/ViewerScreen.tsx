@@ -67,16 +67,13 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   actionLabelDanger: { color: '#ff6b6b', fontSize: 11 },
 })
 
-const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible }) => {
-  const player = useVideoPlayer({ uri }, p => {
-    p.loop = true
-    if (visible) p.play()
-  })
+const VideoSlide: React.FC<{ uri: string; isActive: boolean }> = ({ uri, isActive }) => {
+  const player = useVideoPlayer({ uri }, p => { p.loop = true })
 
   useEffect(() => {
-    if (visible) player.play()
+    if (isActive) player.play()
     else player.pause()
-  }, [visible])
+  }, [isActive])
 
   return (
     <VideoView
@@ -92,11 +89,12 @@ const FileSlide: React.FC<{
   fileId: string
   fileKey: Uint8Array
   visible: boolean
+  isActive: boolean
   priority: 'high' | 'normal'
   onScaleChange?: (s: number) => void
   onSingleTap?: () => void
   barsVisible?: boolean
-}> = ({ fileId, fileKey, visible, priority, onScaleChange, onSingleTap, barsVisible }) => {
+}> = ({ fileId, fileKey, visible, isActive, priority, onScaleChange, onSingleTap, barsVisible }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
@@ -144,10 +142,7 @@ const FileSlide: React.FC<{
   if (kind === 'video') {
     return (
       <View style={styles.slide}>
-        <VideoSlide uri={state.uri} visible={visible} />
-        {!barsVisible && onSingleTap && (
-          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onSingleTap} activeOpacity={1} />
-        )}
+        <VideoSlide uri={state.uri} isActive={isActive} />
       </View>
     )
   }
@@ -215,7 +210,10 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
     autoHideTimer.current = setTimeout(hideBars, 3000)
   }
 
+  const isPanning = useRef(false)
+
   const toggleBars = () => {
+    if (isPanning.current) return
     if (barsVisibleRef.current) hideBars()
     else showBars()
   }
@@ -243,23 +241,32 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
       if (imageScaleRef.current > 1.05) return false
       return dy > 8 && Math.abs(dy) > Math.abs(dx) * 1.5
     },
+    onPanResponderGrant: () => { isPanning.current = true },
     onPanResponderMove: (_, { dy }) => {
       if (dy > 0) translateY.setValue(dy)
     },
     onPanResponderRelease: (_, { dy, vy }) => {
+      isPanning.current = false
       if (dy > DISMISS_THRESHOLD || vy > DISMISS_VELOCITY) {
         dismiss(vy)
       } else {
         snapBack()
       }
     },
-    onPanResponderTerminate: () => { snapBack() },
+    onPanResponderTerminate: () => { isPanning.current = false; snapBack() },
   })).current
 
+  const isCurrentVideo = currentFile ? getMediaKind(currentFile.mimeType) === 'video' : false
+
   useEffect(() => {
+    if (isCurrentVideo) {
+      if (autoHideTimer.current) { clearTimeout(autoHideTimer.current); autoHideTimer.current = null }
+      showBars()
+      return
+    }
     autoHideTimer.current = setTimeout(hideBars, 2500)
     return () => { if (autoHideTimer.current) clearTimeout(autoHideTimer.current) }
-  }, [])
+  }, [isCurrentVideo])
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -362,6 +369,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
             fileId={item}
             fileKey={fileKey}
             visible={Math.abs(index - currentIndex) <= 1}
+            isActive={index === currentIndex}
             priority={index === currentIndex ? 'high' : 'normal'}
             onScaleChange={index === currentIndex ? handleScaleChange : undefined}
             onSingleTap={toggleBars}
