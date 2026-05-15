@@ -2,17 +2,17 @@
 
 A personal encrypted media vault for Android. Stores photos, videos and GIFs locally on-device — fully offline, protected by PIN, optionally by biometrics.
 
-> **Note:** This project was built quickly and for personal use. The code is functional but not production-grade, the architecture is straightforward. It does its job.
+> Built for personal use. The code is functional and the architecture is straightforward — it does its job well.
 
 <p align="center">
   <img src="screenshots/media.jpg" width="260" alt="All Media" />
-  &nbsp;
+  &nbsp;&nbsp;
   <img src="screenshots/import.jpg" width="260" alt="Import" />
-  &nbsp;
+  &nbsp;&nbsp;
   <img src="screenshots/settings.jpg" width="260" alt="Settings" />
 </p>
 <p align="center">
-  <sub>All Media &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Import &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Settings</sub>
+  <sub>All Media &nbsp;·&nbsp; Import &nbsp;·&nbsp; Settings</sub>
 </p>
 
 ## Features
@@ -20,7 +20,7 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 - AES-256-GCM encryption — every file encrypted individually before being written to disk
 - Keys stored in Android Keystore — never exposed to JS
 - PIN-code protected with brute-force counter
-- Optional biometric unlock (fingerprint / face) — hidden button, no visible hint, off by default (click the lower left corner)
+- Optional biometric unlock (fingerprint / face) — hidden button, no visible hint, off by default (tap the lower-left corner)
 - Safe Mode — a second independent vault opened with a different PIN
 - Daily randomizer tab — shows a random subset of your media each day (toggleable; shows all media when off)
 - Full media viewer with pinch-to-zoom, horizontal swipe between files, swipe-down to dismiss
@@ -30,10 +30,11 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 - Filter by type (photo / video / GIF) and sort in All Media
 - Import from gallery with encrypted thumbnail generation
 - Receive files via Android share sheet (ACTION_SEND / ACTION_SEND_MULTIPLE)
-- Export (temporary decrypted copy shared via system share)
+- Export — temporary decrypted copy shared via system share
 - Auto-lock after N minutes of inactivity
 - Shake-to-lock panic gesture (toggleable)
-- `FLAG_SECURE` — blocks screenshots and app switcher previews at OS level
+- `FLAG_SECURE` — blocks screenshots and app switcher previews at OS level (toggleable)
+- Russian / English UI — auto-detected from device locale (CIS → Russian, others → English), switchable in Settings
 - Light / Dark / System theme
 - Fully offline — zero network requests
 
@@ -54,6 +55,7 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 | Gallery access | `expo-media-library` |
 | Settings | `@react-native-async-storage/async-storage` |
 | Safe area | `react-native-safe-area-context` |
+| i18n | Custom (no external deps) — `Intl.DateTimeFormat` locale detection |
 
 ## Security model
 
@@ -61,7 +63,7 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 - Sub-keys derived per purpose (metadata store, file encryption) via PBKDF2
 - Safe Mode uses a completely separate master key and namespace (`vault_safe/`)
 - PIN is verified by attempting decryption — no plain PIN stored anywhere
-- `FLAG_SECURE` is set in `MainActivity.kt` — OS blocks screenshots at the window level
+- `FLAG_SECURE` is set in `MainActivity.kt` at startup; can be disabled per-user in Settings
 - Biometric button is intentionally invisible — its position is known only to the owner
 
 ## Build
@@ -80,12 +82,12 @@ cd android
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-The release APK is signed with the debug keystore by default (`signingConfig signingConfigs.debug` in `build.gradle`). For distribution you'd swap in a proper keystore.
+The release APK is signed with the debug keystore by default (`signingConfig signingConfigs.debug` in `build.gradle`). For distribution swap in a proper keystore.
 
 ### Requirements
 
-- Android device / emulator with Android 10+ (API 29+)
-- `adb` available in PATH
+- Android 10+ (API 29+)
+- `adb` in PATH
 - JDK 17+
 - New Architecture enabled (`newArchEnabled=true`)
 
@@ -100,6 +102,7 @@ src/
   components/   TabBar, MediaThumbnail, ZoomableImage, PinPad, SelectionBar
   hooks/        useSelection
   context/      ThemeContext
+  i18n/         en.ts, ru.ts, index.ts — locale detection + runtime switching
   utils/        media helpers (formatDuration, formatFileSize, …)
   types/        shared TypeScript types
 android/        native Android project (Kotlin, Gradle)
@@ -107,10 +110,11 @@ android/        native Android project (Kotlin, Gradle)
 
 ## Android native additions
 
-Two things added to the default Expo template in `MainActivity.kt`:
+Three things added to the default Expo template:
 
-1. `FLAG_SECURE` set in `onCreate` — blocks screenshots
-2. `processShareIntent()` + `onNewIntent()` — receives files from the system share sheet, copies them to `cacheDir/pending_share/`, JS picks them up on next foreground
+1. **`FLAG_SECURE`** set in `MainActivity.kt` `onCreate` — blocks screenshots at the OS window level
+2. **Share intent handling** — `processShareIntent()` + `onNewIntent()` in `MainActivity.kt` receives files from the system share sheet, copies them to `cacheDir/pending_share/`, JS picks them up on next foreground
+3. **`SecureFlagModule.kt`** — native Kotlin module that lets JS toggle `FLAG_SECURE` at runtime (used by the screenshot-blocking toggle in Settings)
 
 ## License
 
