@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native'
+import { View, Text, StyleSheet, AppState, AppStateStatus, Alert } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as LocalAuthentication from 'expo-local-authentication'
+import { File, Directory, Paths } from 'expo-file-system'
+import { randomUUID } from 'expo-crypto'
 
 import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
-import { initMetadataStore } from './src/storage/metadata'
-import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash } from './src/storage/vault'
+import { initMetadataStore, saveFile } from './src/storage/metadata'
+import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
+import { getAutoLockTimeout, AutoLockTimeout } from './src/storage/settings'
 
 import { PinSetupScreen } from './src/screens/PinSetupScreen'
 import { PinEntryScreen } from './src/screens/PinEntryScreen'
@@ -22,7 +25,7 @@ import { SafeModeSetupScreen } from './src/screens/SafeModeSetupScreen'
 import { TabBar } from './src/components/TabBar'
 import { ThemeProvider } from './src/context/ThemeContext'
 
-import type { AppScreen, MainTab, ViewerReturn, VaultMode } from './src/types'
+import type { AppScreen, MainTab, ViewerReturn, VaultMode, VaultFile } from './src/types'
 import { DARK_COLORS } from './src/theme'
 
 function AppContent() {
@@ -32,17 +35,71 @@ function AppContent() {
   const [biometricsAvailable, setBiometricsAvailable] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
   const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoLockMs = useRef(5 * 60 * 1000)
+  const fileKeyRef = useRef<Uint8Array | null>(null)
   const screenRef = useRef(screen)
   useEffect(() => { screenRef.current = screen }, [screen])
+  useEffect(() => { fileKeyRef.current = fileKey }, [fileKey])
 
   useEffect(() => {
     init()
+    getAutoLockTimeout().then(t => { autoLockMs.current = t === 0 ? 0 : t * 60 * 1000 })
   }, [])
 
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', handleAppState)
-    return () => sub.remove()
-  }, [handleAppState])
+  const resetAutoLock = useCallback(() => {
+    if (autoLockTimer.current) clearTimeout(autoLockTimer.current)
+    if (!autoLockMs.current) return
+    const cur = screenRef.current
+    if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry') return
+    autoLockTimer.current = setTimeout(() => {
+      autoLockTimer.current = null
+      if (!fileKeyRef.current) return
+      setScreen({ name: 'pinEntry' })
+      setFileKey(null)
+    }, autoLockMs.current)
+  }, [])
+
+  const checkPendingShares = useCallback(async () => {
+    if (!fileKeyRef.current) return
+    try {
+      const cacheDir = new Directory(Paths.cache)
+      const pendingDir = new Directory(cacheDir, 'pending_share')
+      const metaFile = new File(pendingDir, 'meta.json')
+      if (!metaFile.exists) return
+      const json = await metaFile.text()
+      const items: { path: string; mimeType: string; name: string }[] = JSON.parse(json)
+      pendingDir.delete()
+      if (!items.length) return
+
+      const key = fileKeyRef.current
+      let success = 0
+      for (const item of items) {
+        try {
+          const id = randomUUID()
+          const srcFile = new File(item.path)
+          const [encUri, thumbPath] = await Promise.all([
+            encryptAndSave(item.path, id, key),
+            generateAndEncryptThumb(item.path, id, item.mimeType, key),
+          ])
+          const vaultFile: VaultFile = {
+            id,
+            originalName: item.name,
+            mimeType: item.mimeType,
+            size: srcFile.size || 0,
+            importedAt: Date.now(),
+            encryptedPath: encUri,
+            thumbPath: thumbPath ?? undefined,
+          }
+          await saveFile(vaultFile)
+          success++
+        } catch {}
+      }
+      if (success > 0) {
+        Alert.alert('Импорт завершён', `Добавлено ${success} файл${success === 1 ? '' : success < 5 ? 'а' : 'ов'} из галереи.`)
+      }
+    } catch {}
+  }, [])
 
   const handleAppState = useCallback((state: AppStateStatus) => {
     if (state === 'active') {
@@ -50,10 +107,12 @@ function AppContent() {
         clearTimeout(lockTimer.current)
         lockTimer.current = null
       }
+      resetAutoLock()
+      checkPendingShares()
       return
     }
-    // Только 'background' — 'inactive' это переходное состояние (клавиатура, пикер, уведомления)
     if (state === 'background') {
+      if (autoLockTimer.current) { clearTimeout(autoLockTimer.current); autoLockTimer.current = null }
       const cur = screenRef.current
       if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry') return
       lockTimer.current = setTimeout(() => {
@@ -62,7 +121,12 @@ function AppContent() {
         lockTimer.current = null
       }, 5000)
     }
-  }, [])
+  }, [resetAutoLock, checkPendingShares])
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', handleAppState)
+    return () => sub.remove()
+  }, [handleAppState])
 
   const init = async () => {
     try {
@@ -107,12 +171,14 @@ function AppContent() {
       }
       setVaultMode(mode)
       setScreen({ name: 'daily' })
+      setTimeout(() => { resetAutoLock(); checkPendingShares() }, 100)
     } catch (e: any) {
       setInitError(e?.message ?? String(e))
     }
   }
 
   const lock = () => {
+    if (autoLockTimer.current) { clearTimeout(autoLockTimer.current); autoLockTimer.current = null }
     setFileKey(null)
     setVaultMode('real')
     setScreen({ name: 'pinEntry' })
@@ -235,7 +301,7 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.bg}>
+      <View style={styles.bg} onTouchStart={resetAutoLock}>
         {/* Все вкладки всегда смонтированы — скрываем через display:none */}
         <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
           <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
@@ -253,6 +319,10 @@ function AppContent() {
             onArchive={() => setScreen({ name: 'archive' })}
             onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
             vaultMode={vaultMode}
+            onAutoLockChange={(t: AutoLockTimeout) => {
+              autoLockMs.current = t === 0 ? 0 : t * 60 * 1000
+              resetAutoLock()
+            }}
           />
         </View>
         {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} />}

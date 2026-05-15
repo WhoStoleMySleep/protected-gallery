@@ -6,12 +6,20 @@ import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { getDailyLimit, setDailyLimit, ThemeMode } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout } from '../storage/settings'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 
 const LIMIT_OPTIONS = [10, 15, 20, 25, 30, 40, 50]
+const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
+  { value: 0, label: 'Нет' },
+  { value: 1, label: '1 мин' },
+  { value: 2, label: '2 мин' },
+  { value: 5, label: '5 мин' },
+  { value: 10, label: '10 мин' },
+  { value: 30, label: '30 мин' },
+]
 
 interface Props {
   onLock: () => void
@@ -22,6 +30,7 @@ interface Props {
   onArchive: () => void
   onSafeModeSetup: () => void
   vaultMode: 'real' | 'safe'
+  onAutoLockChange?: (t: AutoLockTimeout) => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -62,16 +71,24 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   themeBtnActive: { backgroundColor: c.accent },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
   const [loading, setLoading] = useState(false)
   const [dailyLimit, setDailyLimitState] = useState(25)
+  const [autoLock, setAutoLockState] = useState<AutoLockTimeout>(5)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
+    getAutoLockTimeout().then(setAutoLockState)
   }, [])
+
+  const changeAutoLock = async (t: AutoLockTimeout) => {
+    setAutoLockState(t)
+    await setAutoLockTimeout(t)
+    onAutoLockChange?.(t)
+  }
 
   const [limitInput, setLimitInput] = useState('')
 
@@ -234,6 +251,27 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
           )}
+          <View style={styles.row}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="timer-outline" size={20} color={colors.subtext} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Автоблокировка</Text>
+              <View style={styles.limitRow}>
+                {AUTO_LOCK_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.limitBtn, autoLock === opt.value && styles.limitBtnActive]}
+                    onPress={() => changeAutoLock(opt.value)}
+                  >
+                    <Text style={[styles.limitTxt, autoLock === opt.value && styles.limitTxtActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
           <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onLock}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="lock-closed-outline" size={20} color={colors.subtext} />

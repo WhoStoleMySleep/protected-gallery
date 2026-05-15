@@ -23,3 +23,15 @@ export const getThemeMode = async (): Promise<ThemeMode> => {
 export const setThemeMode = async (mode: ThemeMode): Promise<void> => {
   await AsyncStorage.setItem(THEME_KEY, mode)
 }
+
+const AUTO_LOCK_KEY = 'vault:settings:autoLock'
+export type AutoLockTimeout = 0 | 1 | 2 | 5 | 10 | 30  // minutes; 0 = disabled
+
+export const getAutoLockTimeout = async (): Promise<AutoLockTimeout> => {
+  const raw = await AsyncStorage.getItem(AUTO_LOCK_KEY)
+  return raw != null ? (parseInt(raw, 10) as AutoLockTimeout) : 5
+}
+
+export const setAutoLockTimeout = async (t: AutoLockTimeout): Promise<void> => {
+  await AsyncStorage.setItem(AUTO_LOCK_KEY, String(t))
+}

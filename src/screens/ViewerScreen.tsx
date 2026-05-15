@@ -3,15 +3,17 @@ import { Ionicons } from '@expo/vector-icons'
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   FlatList, ActivityIndicator, StatusBar, InteractionManager,
-  Animated, PanResponder, BackHandler,
+  Animated, PanResponder, BackHandler, Alert,
 } from 'react-native'
-import { Image } from 'expo-image'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as Sharing from 'expo-sharing'
 import { getFile } from '../storage/metadata'
+import { updateFileMeta } from '../storage/metadata'
 import { decryptToTemp } from '../storage/vault'
 import { limit } from '../utils/concurrency'
 import { getMediaKind, formatFileSize, formatDate, formatDuration } from '../utils/media'
+import { ZoomableImage } from '../components/ZoomableImage'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
@@ -48,14 +50,22 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   closeTxt: { color: '#fff', fontSize: 18, fontWeight: '600' },
   counter: { color: '#fff', fontSize: 14, fontWeight: '600' },
   infoBtn: { padding: 10, minWidth: 44, alignItems: 'center' },
-  infoTxt: { color: '#fff', fontSize: 18 },
   infoOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
+    position: 'absolute', bottom: 80, left: 0, right: 0,
     backgroundColor: 'rgba(0,0,0,0.75)',
-    padding: 20, paddingBottom: 40, gap: 4,
+    padding: 20, gap: 4,
   },
   infoName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
   infoMeta: { color: c.subtextLight, fontSize: 13 },
+  actionBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  actionBtn: { alignItems: 'center', gap: 4, padding: 8, minWidth: 60 },
+  actionLabel: { color: '#fff', fontSize: 11 },
+  actionLabelDanger: { color: '#ff6b6b', fontSize: 11 },
 })
 
 const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible }) => {
@@ -79,9 +89,13 @@ const VideoSlide: React.FC<{ uri: string; visible: boolean }> = ({ uri, visible 
   )
 }
 
-const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolean; priority: 'high' | 'normal' }> = ({
-  fileId, fileKey, visible, priority,
-}) => {
+const FileSlide: React.FC<{
+  fileId: string
+  fileKey: Uint8Array
+  visible: boolean
+  priority: 'high' | 'normal'
+  onScaleChange?: (s: number) => void
+}> = ({ fileId, fileKey, visible, priority, onScaleChange }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
@@ -137,7 +151,7 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   if (kind === 'image' || kind === 'gif') {
     return (
       <View style={styles.slide}>
-        <Image source={{ uri: state.uri }} style={styles.media} contentFit="contain" />
+        <ZoomableImage uri={state.uri} onScaleChange={onScaleChange} />
       </View>
     )
   }
@@ -152,15 +166,19 @@ const FileSlide: React.FC<{ fileId: string; fileKey: Uint8Array; visible: boolea
   )
 }
 
-export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, onClose }) => {
+export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initialIndex, fileKey, onClose }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
+  const [localFileIds, setLocalFileIds] = useState(initialFileIds)
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
   const [currentFile, setCurrentFile] = useState<VaultFile | null>(null)
+  const [imageScale, setImageScale] = useState(1)
 
+  const flatListRef = useRef<FlatList>(null)
   const translateY = useRef(new Animated.Value(0)).current
+  const imageScaleRef = useRef(1)
 
   const borderRadius = translateY.interpolate({
     inputRange: [0, DISMISS_THRESHOLD],
@@ -193,8 +211,10 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
   }
 
   const panResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (_, { dy, dx }) =>
-      dy > 8 && Math.abs(dy) > Math.abs(dx) * 1.5,
+    onMoveShouldSetPanResponder: (_, { dy, dx }) => {
+      if (imageScaleRef.current > 1.05) return false
+      return dy > 8 && Math.abs(dy) > Math.abs(dx) * 1.5
+    },
     onPanResponderMove: (_, { dy }) => {
       if (dy > 0) translateY.setValue(dy)
     },
@@ -205,9 +225,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
         snapBack()
       }
     },
-    onPanResponderTerminate: () => {
-      snapBack()
-    },
+    onPanResponderTerminate: () => { snapBack() },
   })).current
 
   useEffect(() => {
@@ -219,8 +237,70 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
   }, [])
 
   useEffect(() => {
-    getFile(fileIds[currentIndex]).then(setCurrentFile)
-  }, [currentIndex])
+    getFile(localFileIds[currentIndex]).then(setCurrentFile)
+  }, [currentIndex, localFileIds])
+
+  const handleScaleChange = (s: number) => {
+    imageScaleRef.current = s
+    setImageScale(s)
+  }
+
+  const removeCurrentFile = (fileId: string) => {
+    const newIds = localFileIds.filter(id => id !== fileId)
+    if (newIds.length === 0) {
+      dismiss()
+      return
+    }
+    const newIndex = Math.min(currentIndex, newIds.length - 1)
+    setLocalFileIds(newIds)
+    setCurrentIndex(newIndex)
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: newIndex, animated: false })
+    }, 50)
+  }
+
+  const handleTrash = () => {
+    if (!currentFile) return
+    Alert.alert(
+      'Удалить файл?',
+      'Файл будет перемещён в корзину.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'В корзину',
+          style: 'destructive',
+          onPress: async () => {
+            await updateFileMeta(currentFile.id, { status: 'trashed', trashedAt: Date.now() })
+            removeCurrentFile(currentFile.id)
+          },
+        },
+      ]
+    )
+  }
+
+  const handleArchive = async () => {
+    if (!currentFile) return
+    const isArchived = currentFile.status === 'archived'
+    await updateFileMeta(currentFile.id, { status: isArchived ? 'active' : 'archived' })
+    if (!isArchived) {
+      removeCurrentFile(currentFile.id)
+    } else {
+      const updated = await getFile(currentFile.id)
+      setCurrentFile(updated)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!currentFile) return
+    try {
+      const uri = await decryptToTemp(currentFile.encryptedPath, fileKey, currentFile.mimeType, currentFile.id)
+      await Sharing.shareAsync(uri, { mimeType: currentFile.mimeType, dialogTitle: currentFile.originalName })
+    } catch (e) {
+      Alert.alert('Ошибка', 'Не удалось поделиться файлом.')
+    }
+  }
+
+  const isArchived = currentFile?.status === 'archived'
 
   return (
     <Animated.View
@@ -229,7 +309,8 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
     >
       <StatusBar hidden />
       <FlatList
-        data={fileIds}
+        ref={flatListRef}
+        data={localFileIds}
         keyExtractor={id => id}
         horizontal
         pagingEnabled
@@ -245,6 +326,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
             fileKey={fileKey}
             visible={Math.abs(index - currentIndex) <= 1}
             priority={index === currentIndex ? 'high' : 'normal'}
+            onScaleChange={index === currentIndex ? handleScaleChange : undefined}
           />
         )}
       />
@@ -253,9 +335,9 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
         <TouchableOpacity style={styles.closeBtn} onPress={() => dismiss()}>
           <Text style={styles.closeTxt}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.counter}>{currentIndex + 1} / {fileIds.length}</Text>
+        <Text style={styles.counter}>{currentIndex + 1} / {localFileIds.length}</Text>
         <TouchableOpacity style={styles.infoBtn} onPress={() => setShowInfo(s => !s)}>
-          <Text style={styles.infoTxt}>ℹ</Text>
+          <Ionicons name={showInfo ? 'information-circle' : 'information-circle-outline'} size={22} color="#fff" />
         </TouchableOpacity>
       </SafeAreaView>
 
@@ -272,6 +354,21 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds, initialIndex, fileKey, 
           )}
         </View>
       )}
+
+      <SafeAreaView edges={['bottom']} style={styles.actionBar}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+          <Ionicons name="share-outline" size={24} color="#fff" />
+          <Text style={styles.actionLabel}>Поделиться</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleArchive}>
+          <Ionicons name={isArchived ? 'archive' : 'archive-outline'} size={24} color="#fff" />
+          <Text style={styles.actionLabel}>{isArchived ? 'Убрать' : 'Архив'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleTrash}>
+          <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
+          <Text style={styles.actionLabelDanger}>Удалить</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     </Animated.View>
   )
 }
