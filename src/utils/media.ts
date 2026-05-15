@@ -30,6 +30,10 @@ export const formatFileSize = (bytes: number): string => {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
+// Corrects duration that was accidentally stored as ms*1000 (old imports)
+export const normalizeDuration = (ms: number): number =>
+  ms > 86_400_000 ? Math.round(ms / 1000) : ms
+
 export const formatDuration = (ms: number): string => {
   const total = Math.floor(ms / 1000)
   const h = Math.floor(total / 3600)

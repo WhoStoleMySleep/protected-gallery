@@ -12,7 +12,7 @@ import { getFile } from '../storage/metadata'
 import { updateFileMeta } from '../storage/metadata'
 import { decryptToTemp } from '../storage/vault'
 import { limit } from '../utils/concurrency'
-import { getMediaKind, formatFileSize, formatDate, formatDuration } from '../utils/media'
+import { getMediaKind, formatFileSize, formatDate, formatDuration, normalizeDuration } from '../utils/media'
 import { ZoomableImage } from '../components/ZoomableImage'
 import type { VaultFile } from '../types'
 import { Colors } from '../theme'
@@ -81,7 +81,7 @@ const VideoSlide: React.FC<{ uri: string; isActive: boolean; onDurationLoaded?: 
   useEffect(() => {
     const sub = player.addListener('statusChange', ({ status }) => {
       if (status === 'readyToPlay' && player.duration > 0) {
-        onDurationLoaded?.(Math.round(player.duration * 1000))
+        onDurationLoaded?.(Math.round(player.duration))
       }
     })
     return () => sub.remove()
@@ -421,7 +421,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
           <Text style={styles.infoMeta}>{formatFileSize(currentFile.size)}</Text>
           <Text style={styles.infoMeta}>{formatDate(currentFile.importedAt)}</Text>
           {(currentFile.duration != null || liveDuration != null) && (
-            <Text style={styles.infoMeta}>Длительность: {formatDuration(currentFile.duration ?? liveDuration!)}</Text>
+            <Text style={styles.infoMeta}>Длительность: {formatDuration(normalizeDuration(currentFile.duration ?? liveDuration!))}</Text>
           )}
           {currentFile.width != null && (
             <Text style={styles.infoMeta}>{currentFile.width} × {currentFile.height}</Text>

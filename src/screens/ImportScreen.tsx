@@ -133,7 +133,7 @@ export const ImportScreen: React.FC<Props> = ({ fileKey, onImportDone }) => {
           thumbPath: thumbPath ?? undefined,
           width: asset.width,
           height: asset.height,
-          duration: asset.duration ? asset.duration * 1000 : undefined,
+          duration: asset.duration || undefined,
         }
         await saveFile(vaultFile)
         success++

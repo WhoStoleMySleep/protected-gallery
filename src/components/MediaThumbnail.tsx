@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, Interactio
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import type { VaultFile } from '../types'
-import { getMediaKind, formatDuration } from '../utils/media'
+import { getMediaKind, formatDuration, normalizeDuration } from '../utils/media'
 import { decryptToTemp } from '../storage/vault'
 import { limit } from '../utils/concurrency'
 import { Colors } from '../theme'
@@ -113,7 +113,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
           <View style={styles.videoOverlay}>
             <Ionicons name="play" size={13} color="#fff" style={styles.videoIcon} />
             {file.duration != null && (
-              <Text style={styles.duration}>{formatDuration(file.duration)}</Text>
+              <Text style={styles.duration}>{formatDuration(normalizeDuration(file.duration))}</Text>
             )}
           </View>
         </View>
