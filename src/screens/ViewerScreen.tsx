@@ -69,7 +69,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
 
 const ACTION_BAR_HEIGHT = 64
 
-const VideoSlide: React.FC<{ uri: string; isActive: boolean }> = ({ uri, isActive }) => {
+const VideoSlide: React.FC<{ uri: string; isActive: boolean; onDurationLoaded?: (ms: number) => void }> = ({ uri, isActive, onDurationLoaded }) => {
   const { bottom, top } = useSafeAreaInsets()
   const player = useVideoPlayer({ uri }, p => { p.loop = true })
 
@@ -77,6 +77,15 @@ const VideoSlide: React.FC<{ uri: string; isActive: boolean }> = ({ uri, isActiv
     if (isActive) player.play()
     else player.pause()
   }, [isActive])
+
+  useEffect(() => {
+    const sub = player.addListener('statusChange', ({ status }) => {
+      if (status === 'readyToPlay' && player.duration > 0) {
+        onDurationLoaded?.(Math.round(player.duration * 1000))
+      }
+    })
+    return () => sub.remove()
+  }, [])
 
   const videoHeight = height - ACTION_BAR_HEIGHT - bottom - top - 44
 
@@ -99,7 +108,8 @@ const FileSlide: React.FC<{
   onScaleChange?: (s: number) => void
   onSingleTap?: () => void
   barsVisible?: boolean
-}> = ({ fileId, fileKey, visible, isActive, priority, onScaleChange, onSingleTap, barsVisible }) => {
+  onDurationLoaded?: (ms: number) => void
+}> = ({ fileId, fileKey, visible, isActive, priority, onScaleChange, onSingleTap, barsVisible, onDurationLoaded }) => {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
@@ -147,7 +157,7 @@ const FileSlide: React.FC<{
   if (kind === 'video') {
     return (
       <View style={styles.slide}>
-        <VideoSlide uri={state.uri} isActive={isActive} />
+        <VideoSlide uri={state.uri} isActive={isActive} onDurationLoaded={onDurationLoaded} />
       </View>
     )
   }
@@ -179,6 +189,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
   const [showInfo, setShowInfo] = useState(false)
   const [currentFile, setCurrentFile] = useState<VaultFile | null>(null)
   const [imageScale, setImageScale] = useState(1)
+  const [liveDuration, setLiveDuration] = useState<number | null>(null)
 
   const flatListRef = useRef<FlatList>(null)
   const translateY = useRef(new Animated.Value(0)).current
@@ -286,6 +297,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
   }, [])
 
   useEffect(() => {
+    setLiveDuration(null)
     getFile(localFileIds[currentIndex]).then(setCurrentFile)
   }, [currentIndex, localFileIds])
 
@@ -383,6 +395,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
             onScaleChange={index === currentIndex ? handleScaleChange : undefined}
             onSingleTap={toggleBars}
             barsVisible={barsVisible}
+            onDurationLoaded={index === currentIndex ? setLiveDuration : undefined}
           />
         )}
       />
@@ -407,8 +420,8 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
           <Text style={styles.infoName} numberOfLines={2}>{currentFile.originalName}</Text>
           <Text style={styles.infoMeta}>{formatFileSize(currentFile.size)}</Text>
           <Text style={styles.infoMeta}>{formatDate(currentFile.importedAt)}</Text>
-          {currentFile.duration != null && (
-            <Text style={styles.infoMeta}>Длительность: {formatDuration(currentFile.duration)}</Text>
+          {(currentFile.duration != null || liveDuration != null) && (
+            <Text style={styles.infoMeta}>Длительность: {formatDuration(currentFile.duration ?? liveDuration!)}</Text>
           )}
           {currentFile.width != null && (
             <Text style={styles.infoMeta}>{currentFile.width} × {currentFile.height}</Text>

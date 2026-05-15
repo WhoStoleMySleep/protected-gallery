@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput, Switch } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import * as LocalAuthentication from 'expo-local-authentication'
 import { deletePin } from '../crypto/pin'
 import { deleteMasterKey } from '../crypto/keys'
 import { clearAllMeta } from '../storage/metadata'
 import { clearVault } from '../storage/vault'
-import { Switch } from 'react-native'
-import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled } from '../storage/settings'
+import { getDailyLimit, setDailyLimit, ThemeMode, getAutoLockTimeout, setAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, setPanicShakeEnabled, getBiometricsEnabled, setBiometricsEnabled } from '../storage/settings'
 import { clearDecryptedCache } from '../storage/decryptedCache'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
@@ -33,6 +33,7 @@ interface Props {
   vaultMode: 'real' | 'safe'
   onAutoLockChange?: (t: AutoLockTimeout) => void
   onPanicShakeChange?: (enabled: boolean) => void
+  onBiometricsChange?: (enabled: boolean) => void
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -73,7 +74,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   themeBtnActive: { backgroundColor: c.accent },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
@@ -81,17 +82,31 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
   const [dailyLimit, setDailyLimitState] = useState(25)
   const [autoLock, setAutoLockState] = useState<AutoLockTimeout>(5)
   const [panicShake, setPanicShakeState] = useState(false)
+  const [deviceHasBiometrics, setDeviceHasBiometrics] = useState(false)
+  const [biometricsOn, setBiometricsOn] = useState(true)
 
   useEffect(() => {
     getDailyLimit().then(v => { setDailyLimitState(v); setLimitInput(String(v)) })
     getAutoLockTimeout().then(setAutoLockState)
     getPanicShakeEnabled().then(setPanicShakeState)
+    getBiometricsEnabled().then(setBiometricsOn)
+    LocalAuthentication.hasHardwareAsync().then(async (hw) => {
+      if (!hw) return
+      const enrolled = await LocalAuthentication.isEnrolledAsync()
+      setDeviceHasBiometrics(enrolled)
+    })
   }, [])
 
   const changePanicShake = async (val: boolean) => {
     setPanicShakeState(val)
     await setPanicShakeEnabled(val)
     onPanicShakeChange?.(val)
+  }
+
+  const changeBiometrics = async (val: boolean) => {
+    setBiometricsOn(val)
+    await setBiometricsEnabled(val)
+    onBiometricsChange?.(val)
   }
 
   const changeAutoLock = async (t: AutoLockTimeout) => {
@@ -260,6 +275,23 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
             </TouchableOpacity>
+          )}
+          {deviceHasBiometrics && (
+            <View style={styles.row}>
+              <View style={styles.rowIconWrap}>
+                <Ionicons name="finger-print-outline" size={20} color={colors.subtext} />
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>Биометрия</Text>
+                <Text style={styles.rowDesc}>Разблокировка по отпечатку или лицу</Text>
+              </View>
+              <Switch
+                value={biometricsOn}
+                onValueChange={changeBiometrics}
+                trackColor={{ false: colors.border, true: colors.accentDim }}
+                thumbColor={biometricsOn ? colors.accent : colors.subtext}
+              />
+            </View>
           )}
           <View style={styles.row}>
             <View style={styles.rowIconWrap}>

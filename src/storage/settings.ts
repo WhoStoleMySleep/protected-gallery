@@ -46,3 +46,14 @@ export const getPanicShakeEnabled = async (): Promise<boolean> => {
 export const setPanicShakeEnabled = async (enabled: boolean): Promise<void> => {
   await AsyncStorage.setItem(PANIC_SHAKE_KEY, String(enabled))
 }
+
+const BIOMETRICS_ENABLED_KEY = 'vault:settings:biometricsEnabled'
+
+export const getBiometricsEnabled = async (): Promise<boolean> => {
+  const raw = await AsyncStorage.getItem(BIOMETRICS_ENABLED_KEY)
+  return raw !== 'false'  // default: true
+}
+
+export const setBiometricsEnabled = async (enabled: boolean): Promise<void> => {
+  await AsyncStorage.setItem(BIOMETRICS_ENABLED_KEY, String(enabled))
+}
