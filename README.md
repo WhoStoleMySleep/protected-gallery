@@ -5,11 +5,11 @@ A personal encrypted media vault for Android. Stores photos, videos and GIFs loc
 > Built for personal use. The code is functional and the architecture is straightforward — it does its job well.
 
 <p align="center">
-  <img src="screenshots/media.jpg" width="260" alt="All Media" />
+  <img src="screenshots/media.webp" width="260" alt="All Media" />
   &nbsp;&nbsp;
-  <img src="screenshots/import.jpg" width="260" alt="Import" />
+  <img src="screenshots/import.webp" width="260" alt="Import" />
   &nbsp;&nbsp;
-  <img src="screenshots/settings.jpg" width="260" alt="Settings" />
+  <img src="screenshots/settings.webp" width="260" alt="Settings" />
 </p>
 <p align="center">
   <sub>All Media &nbsp;·&nbsp; Import &nbsp;·&nbsp; Settings</sub>
