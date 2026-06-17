@@ -49,6 +49,7 @@ function AppContent() {
   const screenRef = useRef(screen)
   const [panicShakeEnabled, setPanicShakeEnabled] = useState(false)
   const [langKey, setLangKey] = useState(0)
+  const [mountedSubs, setMountedSubs] = useState<Set<string>>(new Set())
   const handleLangChange = useCallback(() => setLangKey(k => k + 1), [])
   const lockRef = useRef<() => void>(() => {})
   const resetAutoLockRef = useRef<() => void>(() => {})
@@ -58,6 +59,11 @@ function AppContent() {
   }))
   useEffect(() => { screenRef.current = screen }, [screen])
   useEffect(() => { fileKeyRef.current = fileKey }, [fileKey])
+  useEffect(() => {
+    const subs = ['allMedia', 'trash', 'archive'] as const
+    if (subs.includes(screen.name as any))
+      setMountedSubs(prev => prev.has(screen.name) ? prev : new Set([...prev, screen.name]))
+  }, [screen.name])
 
   useEffect(() => {
     init()
@@ -226,6 +232,7 @@ function AppContent() {
     resetDecryptedCacheMem()
     setFileKey(null)
     setVaultMode('real')
+    setMountedSubs(new Set())
     setScreen({ name: 'pinEntry' })
   }, [])
 
@@ -248,6 +255,7 @@ function AppContent() {
 
   const currentTab = (): MainTab => {
     if (screen.name === 'daily' || screen.name === 'import' || screen.name === 'settings') return screen.name
+    if (screen.name === 'allMedia' || screen.name === 'trash' || screen.name === 'archive') return 'settings'
     if (screen.name === 'viewer') {
       const r = screen.returnTo
       if (r === 'allMedia' || r === 'trash' || r === 'archive') return 'settings'
@@ -295,43 +303,6 @@ function AppContent() {
     )
   }
 
-  if (screen.name === 'allMedia' && fileKey) {
-    return (
-      <SafeAreaProvider>
-        <AllMediaScreen
-          fileKey={fileKey}
-          onOpenViewer={openViewer}
-          onBack={() => setScreen({ name: 'settings' })}
-          vaultMode={vaultMode}
-        />
-      </SafeAreaProvider>
-    )
-  }
-
-  if (screen.name === 'trash' && fileKey) {
-    return (
-      <SafeAreaProvider>
-        <TrashScreen
-          fileKey={fileKey}
-          onOpenViewer={openViewer}
-          onBack={() => setScreen({ name: 'settings' })}
-        />
-      </SafeAreaProvider>
-    )
-  }
-
-  if (screen.name === 'archive' && fileKey) {
-    return (
-      <SafeAreaProvider>
-        <ArchiveScreen
-          fileKey={fileKey}
-          onOpenViewer={openViewer}
-          onBack={() => setScreen({ name: 'settings' })}
-        />
-      </SafeAreaProvider>
-    )
-  }
-
   if (screen.name === 'safeModeSetup') {
     return (
       <SafeAreaProvider>
@@ -373,25 +344,55 @@ function AppContent() {
             <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
           </View>
           <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
-            <SettingsScreen
-              onLock={lock}
-              onResetComplete={() => setScreen({ name: 'pinSetup' })}
-              onChangePin={() => setScreen({ name: 'changePin' })}
-              onAllMedia={() => setScreen({ name: 'allMedia' })}
-              onTrash={() => setScreen({ name: 'trash' })}
-              onArchive={() => setScreen({ name: 'archive' })}
-              onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
-              onBackup={() => setScreen({ name: 'backup' })}
-              vaultMode={vaultMode}
-              onAutoLockChange={(t: AutoLockTimeout) => {
-                autoLockMs.current = t === 0 ? 0 : t * 60 * 1000
-                resetAutoLock()
-              }}
-              onPanicShakeChange={setPanicShakeEnabled}
-            onBiometricsChange={setBiometricsEnabledState}
-            onDailyEnabledChange={setDailyEnabledState}
-            onLangChange={handleLangChange}
-            />
+            <View style={[StyleSheet.absoluteFill, screen.name !== 'settings' && styles.hidden]}>
+              <SettingsScreen
+                onLock={lock}
+                onResetComplete={() => setScreen({ name: 'pinSetup' })}
+                onChangePin={() => setScreen({ name: 'changePin' })}
+                onAllMedia={() => setScreen({ name: 'allMedia' })}
+                onTrash={() => setScreen({ name: 'trash' })}
+                onArchive={() => setScreen({ name: 'archive' })}
+                onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
+                onBackup={() => setScreen({ name: 'backup' })}
+                vaultMode={vaultMode}
+                onAutoLockChange={(t: AutoLockTimeout) => {
+                  autoLockMs.current = t === 0 ? 0 : t * 60 * 1000
+                  resetAutoLock()
+                }}
+                onPanicShakeChange={setPanicShakeEnabled}
+                onBiometricsChange={setBiometricsEnabledState}
+                onDailyEnabledChange={setDailyEnabledState}
+                onLangChange={handleLangChange}
+              />
+            </View>
+            {fileKey && (screen.name === 'allMedia' || mountedSubs.has('allMedia')) && (
+              <View style={[StyleSheet.absoluteFill, screen.name !== 'allMedia' && styles.hidden]}>
+                <AllMediaScreen
+                  fileKey={fileKey}
+                  onOpenViewer={openViewer}
+                  onBack={() => setScreen({ name: 'settings' })}
+                  vaultMode={vaultMode}
+                />
+              </View>
+            )}
+            {fileKey && (screen.name === 'trash' || mountedSubs.has('trash')) && (
+              <View style={[StyleSheet.absoluteFill, screen.name !== 'trash' && styles.hidden]}>
+                <TrashScreen
+                  fileKey={fileKey}
+                  onOpenViewer={openViewer}
+                  onBack={() => setScreen({ name: 'settings' })}
+                />
+              </View>
+            )}
+            {fileKey && (screen.name === 'archive' || mountedSubs.has('archive')) && (
+              <View style={[StyleSheet.absoluteFill, screen.name !== 'archive' && styles.hidden]}>
+                <ArchiveScreen
+                  fileKey={fileKey}
+                  onOpenViewer={openViewer}
+                  onBack={() => setScreen({ name: 'settings' })}
+                />
+              </View>
+            )}
           </View>
         </View>
         {screen.name !== 'viewer' && <TabBar active={tab} onSelect={t => setScreen({ name: t } as AppScreen)} dailyEnabled={dailyEnabled} />}
