@@ -344,7 +344,7 @@ function AppContent() {
             <ImportScreen fileKey={fileKey} onImportDone={() => setScreen({ name: 'daily' })} />
           </View>
           <View style={[styles.fill, tab !== 'settings' && styles.hidden]}>
-            <View style={[StyleSheet.absoluteFill, screen.name !== 'settings' && styles.hidden]}>
+            <View style={[styles.fill, screen.name !== 'settings' && styles.hidden]}>
               <SettingsScreen
                 onLock={lock}
                 onResetComplete={() => setScreen({ name: 'pinSetup' })}
@@ -366,7 +366,7 @@ function AppContent() {
               />
             </View>
             {fileKey && (screen.name === 'allMedia' || mountedSubs.has('allMedia')) && (
-              <View style={[StyleSheet.absoluteFill, screen.name !== 'allMedia' && styles.hidden]}>
+              <View style={[styles.fill, screen.name !== 'allMedia' && styles.hidden]}>
                 <AllMediaScreen
                   fileKey={fileKey}
                   onOpenViewer={openViewer}
@@ -376,7 +376,7 @@ function AppContent() {
               </View>
             )}
             {fileKey && (screen.name === 'trash' || mountedSubs.has('trash')) && (
-              <View style={[StyleSheet.absoluteFill, screen.name !== 'trash' && styles.hidden]}>
+              <View style={[styles.fill, screen.name !== 'trash' && styles.hidden]}>
                 <TrashScreen
                   fileKey={fileKey}
                   onOpenViewer={openViewer}
@@ -385,7 +385,7 @@ function AppContent() {
               </View>
             )}
             {fileKey && (screen.name === 'archive' || mountedSubs.has('archive')) && (
-              <View style={[StyleSheet.absoluteFill, screen.name !== 'archive' && styles.hidden]}>
+              <View style={[styles.fill, screen.name !== 'archive' && styles.hidden]}>
                 <ArchiveScreen
                   fileKey={fileKey}
                   onOpenViewer={openViewer}
