@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
@@ -9,7 +9,14 @@ import { limit } from '../utils/concurrency'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 
+const MAX_URI_CACHE = 200
 const uriCache = new Map<string, string>()
+
+const setCached = (id: string, uri: string) => {
+  if (uriCache.size >= MAX_URI_CACHE)
+    uriCache.delete(uriCache.keys().next().value!)
+  uriCache.set(id, uri)
+}
 
 interface Props {
   file: VaultFile
@@ -52,9 +59,9 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   },
 })
 
-export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, onLongPress, selected, selectionMode }) => {
+const MediaThumbnailBase: React.FC<Props> = ({ file, fileKey, size, onPress, onLongPress, selected, selectionMode }) => {
   const { colors } = useTheme()
-  const styles = makeStyles(colors)
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const cached = uriCache.get(file.id)
   const [uri, setUri] = useState<string | null>(cached ?? null)
@@ -73,7 +80,7 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
           const cacheKey = file.thumbPath ? file.id + '_thumb' : file.id
           const mime = file.thumbPath ? 'image/jpeg' : file.mimeType
           const tempUri = await decryptToTemp(src, fileKey, mime, cacheKey)
-          uriCache.set(file.id, tempUri)
+          setCached(file.id, tempUri)
           if (!cancelled) { setUri(tempUri); setLoading(false) }
         } catch {
           if (!cancelled) { setFailed(true); setLoading(false) }
@@ -135,4 +142,5 @@ export const MediaThumbnail: React.FC<Props> = ({ file, fileKey, size, onPress, 
   )
 }
 
+export const MediaThumbnail = React.memo(MediaThumbnailBase)
 export const clearUriCache = () => uriCache.clear()

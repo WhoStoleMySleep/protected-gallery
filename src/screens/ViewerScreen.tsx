@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   FlatList, ActivityIndicator, StatusBar, InteractionManager,
   Animated, PanResponder, BackHandler, Alert,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Sharing from 'expo-sharing'
@@ -112,7 +113,7 @@ const FileSlide: React.FC<{
   onDurationLoaded?: (ms: number) => void
 }> = ({ fileId, fileKey, visible, isActive, priority, onScaleChange, onSingleTap, barsVisible, onDurationLoaded }) => {
   const { colors } = useTheme()
-  const styles = makeStyles(colors)
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const [state, setState] = useState<FileState>({ file: null, uri: null, loading: true, error: false })
 
@@ -135,6 +136,8 @@ const FileSlide: React.FC<{
     })
     return () => { cancelled = true; task.cancel() }
   }, [fileId, visible])
+
+  if (!visible) return <View style={styles.slide} />
 
   if (state.loading) {
     return (
@@ -183,7 +186,7 @@ const FileSlide: React.FC<{
 
 export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initialIndex, fileKey, onClose }) => {
   const { colors } = useTheme()
-  const styles = makeStyles(colors)
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const [localFileIds, setLocalFileIds] = useState(initialFileIds)
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
@@ -242,7 +245,7 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
       toValue: height,
       duration,
       useNativeDriver: true,
-    }).start(onClose)
+    }).start(() => { Image.clearMemoryCache(); onClose() })
   }
 
   const snapBack = () => {

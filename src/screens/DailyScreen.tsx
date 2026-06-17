@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
   Dimensions, ActivityIndicator,
@@ -42,7 +42,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
 
 export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
   const { colors } = useTheme()
-  const styles = makeStyles(colors)
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const [files, setFiles] = useState<VaultFile[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,6 +144,10 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
           keyExtractor={f => f.id}
           numColumns={COLS}
           contentContainerStyle={styles.grid}
+          windowSize={5}
+          maxToRenderPerBatch={9}
+          initialNumToRender={9}
+          removeClippedSubviews
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
           renderItem={({ item, index }) => (
             <View style={{ margin: GAP / 2 }}>

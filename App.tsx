@@ -8,8 +8,10 @@ import { randomUUID } from 'expo-crypto'
 import { pinExists } from './src/crypto/pin'
 import { generateAndStoreMasterKey, loadMasterKey, masterKeyExists, deriveSubKey, loadSafeKey, generateAndStoreSafeKey } from './src/crypto/keys'
 import { initMetadataStore, saveFile } from './src/storage/metadata'
-import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb } from './src/storage/vault'
+import { ensureVaultDir, initVaultNamespace, purgeExpiredTrash, encryptAndSave, generateAndEncryptThumb, clearTempFiles } from './src/storage/vault'
 import { getAutoLockTimeout, AutoLockTimeout, getPanicShakeEnabled, getBiometricsEnabled, getDailyEnabled, getSecureFlagEnabled, getLanguageOverride } from './src/storage/settings'
+import { resetDecryptedCacheMem } from './src/storage/decryptedCache'
+import { clearUriCache } from './src/components/MediaThumbnail'
 import { applySecureFlag } from './src/native/secureFlag'
 import { Accelerometer } from 'expo-sensors'
 
@@ -219,6 +221,9 @@ function AppContent() {
 
   const lock = useCallback(() => {
     if (autoLockTimer.current) { clearTimeout(autoLockTimer.current); autoLockTimer.current = null }
+    clearTempFiles()
+    clearUriCache()
+    resetDecryptedCacheMem()
     setFileKey(null)
     setVaultMode('real')
     setScreen({ name: 'pinEntry' })

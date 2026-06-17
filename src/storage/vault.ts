@@ -105,6 +105,15 @@ export const purgeExpiredTrash = async (): Promise<void> => {
   if (expired.length > 0) await permanentlyDeleteFiles(expired)
 }
 
+export const clearTempFiles = (): void => {
+  try {
+    for (const item of getCacheDir().list()) {
+      if (item instanceof File && item.name.startsWith('tmp_'))
+        item.delete()
+    }
+  } catch {}
+}
+
 export const clearVault = () => {
   const dir = getVaultDir()
   if (dir.exists) dir.delete()
