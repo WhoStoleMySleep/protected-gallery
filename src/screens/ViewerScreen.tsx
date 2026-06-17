@@ -9,6 +9,7 @@ import { Image } from 'expo-image'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Sharing from 'expo-sharing'
+import RNFS from 'react-native-fs'
 import { getFile } from '../storage/metadata'
 import { updateFileMeta } from '../storage/metadata'
 import { decryptToTemp } from '../storage/vault'
@@ -368,6 +369,20 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
     }
   }
 
+  const handleSaveToDownloads = async () => {
+    if (!currentFile) return
+    showBars()
+    try {
+      const uri = await decryptToTemp(currentFile.encryptedPath, fileKey, currentFile.mimeType, currentFile.id)
+      const dest = `${RNFS.DownloadDirectoryPath}/${currentFile.originalName}`
+      await RNFS.copyFile(uri.replace('file://', ''), dest)
+      await RNFS.scanFile(dest)
+      Alert.alert('', s.viewer.saveSuccess)
+    } catch {
+      Alert.alert(s.viewer.shareError, s.viewer.saveError)
+    }
+  }
+
   const isArchived = currentFile?.status === 'archived'
 
   return (
@@ -438,6 +453,10 @@ export const ViewerScreen: React.FC<Props> = ({ fileIds: initialFileIds, initial
         pointerEvents={barsVisible ? 'auto' : 'none'}
       >
         <SafeAreaView edges={['bottom']} style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleSaveToDownloads}>
+            <Ionicons name="download-outline" size={24} color="#fff" />
+            <Text style={styles.actionLabel}>{s.viewer.saveToGallery}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color="#fff" />
             <Text style={styles.actionLabel}>{s.viewer.share}</Text>
