@@ -32,4 +32,5 @@ export type AppScreen =
   | { name: 'allMedia' }
   | { name: 'trash' }
   | { name: 'archive' }
+  | { name: 'backup' }
   | { name: 'viewer'; fileIds: string[]; initialIndex: number; returnTo: ViewerReturn }

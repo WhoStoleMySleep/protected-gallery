@@ -24,6 +24,7 @@ import { AllMediaScreen } from './src/screens/AllMediaScreen'
 import { TrashScreen } from './src/screens/TrashScreen'
 import { ArchiveScreen } from './src/screens/ArchiveScreen'
 import { SafeModeSetupScreen } from './src/screens/SafeModeSetupScreen'
+import { BackupScreen } from './src/screens/BackupScreen'
 import { TabBar } from './src/components/TabBar'
 import { ThemeProvider } from './src/context/ThemeContext'
 
@@ -87,7 +88,7 @@ function AppContent() {
     if (autoLockTimer.current) clearTimeout(autoLockTimer.current)
     if (!autoLockMs.current) return
     const cur = screenRef.current
-    if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry') return
+    if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry' || cur.name === 'backup') return
     autoLockTimer.current = setTimeout(() => {
       autoLockTimer.current = null
       if (!fileKeyRef.current) return
@@ -153,7 +154,7 @@ function AppContent() {
     if (state === 'background') {
       if (autoLockTimer.current) { clearTimeout(autoLockTimer.current); autoLockTimer.current = null }
       const cur = screenRef.current
-      if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry') return
+      if (cur.name === 'loading' || cur.name === 'pinSetup' || cur.name === 'pinEntry' || cur.name === 'backup') return
       lockTimer.current = setTimeout(() => {
         setScreen({ name: 'pinEntry' })
         setFileKey(null)
@@ -336,6 +337,18 @@ function AppContent() {
     )
   }
 
+  if (screen.name === 'backup' && fileKey) {
+    return (
+      <SafeAreaProvider>
+        <BackupScreen
+          masterKey={fileKey}
+          onBack={() => setScreen({ name: 'settings' })}
+          onImportComplete={() => { setFileKey(null); setVaultMode('real'); init() }}
+        />
+      </SafeAreaProvider>
+    )
+  }
+
   if (!fileKey) return <View style={styles.bg} />
 
   const tab = currentTab()
@@ -362,6 +375,7 @@ function AppContent() {
               onTrash={() => setScreen({ name: 'trash' })}
               onArchive={() => setScreen({ name: 'archive' })}
               onSafeModeSetup={() => setScreen({ name: 'safeModeSetup' })}
+              onBackup={() => setScreen({ name: 'backup' })}
               vaultMode={vaultMode}
               onAutoLockChange={(t: AutoLockTimeout) => {
                 autoLockMs.current = t === 0 ? 0 : t * 60 * 1000

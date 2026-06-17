@@ -25,6 +25,7 @@ interface Props {
   onTrash: () => void
   onArchive: () => void
   onSafeModeSetup: () => void
+  onBackup: () => void
   vaultMode: 'real' | 'safe'
   onAutoLockChange?: (t: AutoLockTimeout) => void
   onPanicShakeChange?: (enabled: boolean) => void
@@ -74,7 +75,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   langBtnTxt: { color: c.subtext, fontSize: 13, fontWeight: '700' },
 })
 
-export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange, onSecureFlagChange, onLangChange }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onChangePin, onAllMedia, onTrash, onArchive, onSafeModeSetup, onBackup, vaultMode, onAutoLockChange, onPanicShakeChange, onBiometricsChange, onDailyEnabledChange, onSecureFlagChange, onLangChange }) => {
   const { colors, mode, setMode } = useTheme()
   const styles = makeStyles(colors)
 
@@ -398,6 +399,22 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
             </View>
           </TouchableOpacity>
         </View>
+
+        {vaultMode === 'real' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{s.settings.sections.backup}</Text>
+            <TouchableOpacity style={[styles.row, styles.rowNoBorder]} onPress={onBackup}>
+              <View style={styles.rowIconWrap}>
+                <Ionicons name="save-outline" size={20} color={colors.subtext} />
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>{s.settings.backup.title}</Text>
+                <Text style={styles.rowDesc}>{s.settings.backup.desc}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.subtext} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{s.settings.sections.appearance}</Text>
