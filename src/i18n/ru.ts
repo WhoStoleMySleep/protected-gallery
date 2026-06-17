@@ -100,6 +100,10 @@ export const ru: AppStrings = {
     trash: 'Корзина',
     restore: 'Восстановить',
     delete: 'Удалить',
+    toSafe: 'В сейф',
+    toSafeNotConfigured: 'Безопасный режим не настроен. Настройте его в Настройках.',
+    toSafeDone: (n: number) => `${n} ${pl(n, 'файл', 'файла', 'файлов')} перемещено в безопасное хранилище.`,
+    toSafeError: 'Не удалось переместить некоторые файлы.',
   },
   viewer: {
     loadError: 'Ошибка загрузки',

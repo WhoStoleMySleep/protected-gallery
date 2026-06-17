@@ -302,6 +302,7 @@ function AppContent() {
           fileKey={fileKey}
           onOpenViewer={openViewer}
           onBack={() => setScreen({ name: 'settings' })}
+          vaultMode={vaultMode}
         />
       </SafeAreaProvider>
     )
@@ -365,7 +366,7 @@ function AppContent() {
           <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
             {dailyEnabled
               ? <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
-              : <AllMediaScreen fileKey={fileKey} onOpenViewer={openViewer} />
+              : <AllMediaScreen fileKey={fileKey} onOpenViewer={openViewer} vaultMode={vaultMode} />
             }
           </View>
           <View style={[styles.fill, tab !== 'import' && styles.hidden]}>

@@ -91,6 +91,10 @@ export const en = {
     trash: 'Trash',
     restore: 'Restore',
     delete: 'Delete',
+    toSafe: 'To Safe',
+    toSafeNotConfigured: 'Safe mode is not configured. Set it up in Settings.',
+    toSafeDone: (n: number) => `${n} ${pl(n, 'file', 'files')} moved to Safe vault.`,
+    toSafeError: 'Failed to move some files.',
   },
   viewer: {
     loadError: 'Load error',

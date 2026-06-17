@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import {
-  View, Text, FlatList, StyleSheet, RefreshControl,
+  View, Text, FlatList, StyleSheet, RefreshControl, Alert,
   Dimensions, ActivityIndicator, TouchableOpacity, BackHandler, ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -8,9 +8,11 @@ import { Ionicons } from '@expo/vector-icons'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
-import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
+import { getAllFileIds, getFile, updateFileMeta, saveFileToNs } from '../storage/metadata'
+import { transferFileToSafe, permanentlyDeleteFiles } from '../storage/vault'
+import { loadSafeKey, deriveSubKey } from '../crypto/keys'
 import { getMediaKind } from '../utils/media'
-import type { VaultFile } from '../types'
+import type { VaultFile, VaultMode } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 import { s } from '../i18n'
@@ -40,6 +42,7 @@ interface Props {
   fileKey: Uint8Array
   onOpenViewer: (fileIds: string[], index: number) => void
   onBack?: () => void
+  vaultMode?: VaultMode
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -77,7 +80,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   emptyHint: { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 20 },
 })
 
-export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack }) => {
+export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack, vaultMode }) => {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
@@ -141,6 +144,33 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
     await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'trashed', trashedAt: now })))
     clearSelection()
     await loadAll()
+  }
+
+  const moveToSafe = async () => {
+    const safeKey = await loadSafeKey()
+    if (!safeKey) {
+      Alert.alert('', s.selection.toSafeNotConfigured)
+      return
+    }
+    const safeMetaKey = await deriveSubKey(safeKey, 'metadata')
+    const ids = Array.from(selected)
+    let moved = 0
+    const toDelete: VaultFile[] = []
+    for (const id of ids) {
+      const file = await getFile(id)
+      if (!file) continue
+      try {
+        const newFile = await transferFileToSafe(file, fileKey, safeKey)
+        await saveFileToNs(newFile, 'vault_safe', safeMetaKey)
+        toDelete.push(file)
+        moved++
+      } catch {}
+    }
+    if (toDelete.length > 0) await permanentlyDeleteFiles(toDelete)
+    clearSelection()
+    await loadAll()
+    if (moved > 0) Alert.alert('', s.selection.toSafeDone(moved))
+    else Alert.alert('', s.selection.toSafeError)
   }
 
   const cycleSort = () => {
@@ -230,6 +260,7 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack 
           count={selected.size}
           onCancel={clearSelection}
           actions={[
+            ...(vaultMode === 'real' ? [{ label: s.selection.toSafe, onPress: moveToSafe }] : []),
             { label: s.selection.archive, onPress: archiveSelected },
             { label: s.selection.trash, danger: true, onPress: trashSelected },
           ]}

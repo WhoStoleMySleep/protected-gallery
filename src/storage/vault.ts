@@ -105,6 +105,31 @@ export const purgeExpiredTrash = async (): Promise<void> => {
   if (expired.length > 0) await permanentlyDeleteFiles(expired)
 }
 
+export const transferFileToSafe = async (
+  file: VaultFile,
+  realKey: Uint8Array,
+  safeKey: Uint8Array,
+): Promise<VaultFile> => {
+  const safeDir = new Directory(Paths.document, 'vault_safe')
+  if (!safeDir.exists) safeDir.create({ intermediates: true })
+
+  const decrypted = decryptBytes(await new File(file.encryptedPath).bytes(), realKey)
+  const newEnc = new File(safeDir, `${file.id}.enc`)
+  newEnc.write(encryptBytes(decrypted, safeKey))
+
+  let thumbPath: string | undefined
+  if (file.thumbPath) {
+    try {
+      const decThumb = decryptBytes(await new File(file.thumbPath).bytes(), realKey)
+      const newThumb = new File(safeDir, `${file.id}_thumb.enc`)
+      newThumb.write(encryptBytes(decThumb, safeKey))
+      thumbPath = newThumb.uri
+    } catch {}
+  }
+
+  return { ...file, encryptedPath: newEnc.uri, thumbPath }
+}
+
 export const clearTempFiles = (): void => {
   try {
     for (const item of getCacheDir().list()) {

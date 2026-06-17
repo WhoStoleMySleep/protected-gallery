@@ -82,6 +82,18 @@ export const getFilesByStatus = async (status: FileStatus): Promise<VaultFile[]>
   return files.filter((f): f is VaultFile => f !== null && f.status === status)
 }
 
+export const saveFileToNs = async (file: VaultFile, ns: string, metaKey: Uint8Array): Promise<void> => {
+  const encVal = encryptString(JSON.stringify(file), metaKey)
+  const indexKey = `${ns}:index:v1`
+  await AsyncStorage.setItem(`${ns}:file:${file.id}`, encVal)
+  const raw = await AsyncStorage.getItem(indexKey)
+  const ids: string[] = raw ? JSON.parse(raw) : []
+  if (!ids.includes(file.id)) {
+    ids.push(file.id)
+    await AsyncStorage.setItem(indexKey, JSON.stringify(ids))
+  }
+}
+
 export const saveDailySelection = async (date: string, ids: string[]): Promise<void> => {
   await AsyncStorage.setItem(dailyPrefix() + date, enc(JSON.stringify(ids)))
 }
