@@ -10,6 +10,7 @@ import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
 import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
 import { moveFilesToSafe } from '../storage/safeTransfer'
+import { loadInBatches } from '../utils/concurrency'
 import { getMediaKind } from '../utils/media'
 import type { VaultFile, VaultMode } from '../types'
 import { Colors } from '../theme'
@@ -102,9 +103,8 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack,
     setLoadError(null)
     try {
       const allIds = await getAllFileIds()
-      const loaded = await Promise.all(allIds.map(id => getFile(id)))
-      const valid = loaded.filter((f): f is VaultFile => f !== null && (!f.status || f.status === 'active'))
-      setFiles(valid)
+      const loaded = await loadInBatches(allIds, getFile)
+      setFiles(loaded.filter(f => !f.status || f.status === 'active'))
     } catch (e: any) {
       setLoadError(e?.message ?? String(e))
     }

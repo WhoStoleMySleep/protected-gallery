@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { encryptString, decryptString } from '../crypto/cipher'
+import { loadInBatches } from '../utils/concurrency'
 import type { VaultFile, FileStatus } from '../types'
 
 let _key: Uint8Array | null = null
@@ -43,11 +44,8 @@ export const getAllFileIds = async (): Promise<string[]> => {
   return raw ? JSON.parse(raw) : []
 }
 
-export const getAllFiles = async (): Promise<VaultFile[]> => {
-  const ids = await getAllFileIds()
-  const files = await Promise.all(ids.map(id => getFile(id)))
-  return files.filter((f): f is VaultFile => f !== null)
-}
+export const getAllFiles = async (): Promise<VaultFile[]> =>
+  loadInBatches(await getAllFileIds(), getFile)
 
 export const deleteFileMeta = async (id: string): Promise<void> => {
   await AsyncStorage.removeItem(filePrefix() + id)
@@ -69,17 +67,13 @@ export const updateFileMeta = async (id: string, partial: Partial<VaultFile>): P
 }
 
 export const getActiveFileIds = async (): Promise<string[]> => {
-  const ids = await getAllFileIds()
-  const files = await Promise.all(ids.map(id => getFile(id)))
-  return files
-    .filter((f): f is VaultFile => f !== null && (!f.status || f.status === 'active'))
-    .map(f => f.id)
+  const files = await getAllFiles()
+  return files.filter(f => !f.status || f.status === 'active').map(f => f.id)
 }
 
 export const getFilesByStatus = async (status: FileStatus): Promise<VaultFile[]> => {
-  const ids = await getAllFileIds()
-  const files = await Promise.all(ids.map(id => getFile(id)))
-  return files.filter((f): f is VaultFile => f !== null && f.status === status)
+  const files = await getAllFiles()
+  return files.filter(f => f.status === status)
 }
 
 export const saveFileToNs = async (file: VaultFile, ns: string, metaKey: Uint8Array): Promise<void> => {

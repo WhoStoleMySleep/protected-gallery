@@ -1,0 +1,1 @@
+node scripts/bump-version.cjs "$1"

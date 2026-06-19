@@ -9,6 +9,7 @@ import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
 import { getActiveFileIds, loadDailySelection, saveDailySelection, getFile, updateFileMeta } from '../storage/metadata'
 import { moveFilesToSafe } from '../storage/safeTransfer'
+import { loadInBatches } from '../utils/concurrency'
 import { getDailyLimit } from '../storage/settings'
 import { selectDaily, getTodayKey } from '../utils/randomizer'
 import { formatDate } from '../utils/media'
@@ -78,8 +79,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer, vaultMode 
         }
       }
 
-      const loaded = await Promise.all(selectedIds.map(id => getFile(id)))
-      setFiles(loaded.filter((f): f is VaultFile => f !== null))
+      setFiles(await loadInBatches(selectedIds, getFile))
     } catch (e: any) {
       setLoadError(e?.message ?? String(e))
     }
