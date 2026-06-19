@@ -1,17 +1,18 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
-  Dimensions, ActivityIndicator,
+  Dimensions, ActivityIndicator, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
 import { getActiveFileIds, loadDailySelection, saveDailySelection, getFile, updateFileMeta } from '../storage/metadata'
+import { moveFilesToSafe } from '../storage/safeTransfer'
 import { getDailyLimit } from '../storage/settings'
 import { selectDaily, getTodayKey } from '../utils/randomizer'
 import { formatDate } from '../utils/media'
-import type { VaultFile } from '../types'
+import type { VaultFile, VaultMode } from '../types'
 import { Colors } from '../theme'
 import { useTheme } from '../context/ThemeContext'
 import { s } from '../i18n'
@@ -24,6 +25,7 @@ const ITEM_SIZE = (width - GAP * (COLS + 1)) / COLS
 interface Props {
   fileKey: Uint8Array
   onOpenViewer: (fileIds: string[], index: number) => void
+  vaultMode?: VaultMode
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
@@ -40,7 +42,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   emptyHint: { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 20 },
 })
 
-export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
+export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer, vaultMode }) => {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
@@ -104,6 +106,15 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
     await Promise.all(Array.from(selected).map(id => updateFileMeta(id, { status: 'trashed', trashedAt: now })))
     clearSelection()
     await loadDaily()
+  }
+
+  const moveToSafe = async () => {
+    const moved = await moveFilesToSafe(Array.from(selected), fileKey)
+    clearSelection()
+    await loadDaily()
+    if (moved === -1) Alert.alert('', s.selection.toSafeNotConfigured)
+    else if (moved > 0) Alert.alert('', s.selection.toSafeDone(moved))
+    else Alert.alert('', s.selection.toSafeError)
   }
 
   if (loading) {
@@ -170,6 +181,7 @@ export const DailyScreen: React.FC<Props> = ({ fileKey, onOpenViewer }) => {
           count={selected.size}
           onCancel={clearSelection}
           actions={[
+            ...(vaultMode === 'real' ? [{ label: s.selection.toSafe, onPress: moveToSafe }] : []),
             { label: s.selection.archive, onPress: archiveSelected },
             { label: s.selection.trash, danger: true, onPress: trashSelected },
           ]}

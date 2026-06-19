@@ -336,7 +336,7 @@ function AppContent() {
         <View style={styles.fill}>
           <View style={[styles.fill, tab !== 'daily' && styles.hidden]}>
             {dailyEnabled
-              ? <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} />
+              ? <DailyScreen fileKey={fileKey} onOpenViewer={openViewer} vaultMode={vaultMode} />
               : <AllMediaScreen fileKey={fileKey} onOpenViewer={openViewer} vaultMode={vaultMode} />
             }
           </View>

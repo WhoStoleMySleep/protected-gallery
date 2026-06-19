@@ -8,9 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { MediaThumbnail } from '../components/MediaThumbnail'
 import { SelectionBar } from '../components/SelectionBar'
 import { useSelection } from '../hooks/useSelection'
-import { getAllFileIds, getFile, updateFileMeta, saveFileToNs } from '../storage/metadata'
-import { transferFileToSafe, permanentlyDeleteFiles } from '../storage/vault'
-import { loadSafeKey, deriveSubKey } from '../crypto/keys'
+import { getAllFileIds, getFile, updateFileMeta } from '../storage/metadata'
+import { moveFilesToSafe } from '../storage/safeTransfer'
 import { getMediaKind } from '../utils/media'
 import type { VaultFile, VaultMode } from '../types'
 import { Colors } from '../theme'
@@ -147,29 +146,11 @@ export const AllMediaScreen: React.FC<Props> = ({ fileKey, onOpenViewer, onBack,
   }
 
   const moveToSafe = async () => {
-    const safeKey = await loadSafeKey()
-    if (!safeKey) {
-      Alert.alert('', s.selection.toSafeNotConfigured)
-      return
-    }
-    const safeMetaKey = await deriveSubKey(safeKey, 'metadata')
-    const ids = Array.from(selected)
-    let moved = 0
-    const toDelete: VaultFile[] = []
-    for (const id of ids) {
-      const file = await getFile(id)
-      if (!file) continue
-      try {
-        const newFile = await transferFileToSafe(file, fileKey, safeKey)
-        await saveFileToNs(newFile, 'vault_safe', safeMetaKey)
-        toDelete.push(file)
-        moved++
-      } catch {}
-    }
-    if (toDelete.length > 0) await permanentlyDeleteFiles(toDelete)
+    const moved = await moveFilesToSafe(Array.from(selected), fileKey)
     clearSelection()
     await loadAll()
-    if (moved > 0) Alert.alert('', s.selection.toSafeDone(moved))
+    if (moved === -1) Alert.alert('', s.selection.toSafeNotConfigured)
+    else if (moved > 0) Alert.alert('', s.selection.toSafeDone(moved))
     else Alert.alert('', s.selection.toSafeError)
   }
 
