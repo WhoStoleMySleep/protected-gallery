@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { View, Pressable, Text, StyleSheet, ActivityIndicator, InteractionManager, Animated } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import type { VaultFile } from '../types'
@@ -31,7 +31,7 @@ interface Props {
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { borderRadius: 6, overflow: 'hidden', backgroundColor: c.card },
   placeholder: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.card,
@@ -59,9 +59,12 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   },
 })
 
+const SPRING = { damping: 12, stiffness: 500, mass: 0.7, useNativeDriver: true }
+
 const MediaThumbnailBase: React.FC<Props> = ({ file, fileKey, size, onPress, onLongPress, selected, selectionMode }) => {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
+  const scale = useRef(new Animated.Value(1)).current
 
   const cached = uriCache.get(file.id)
   const [uri, setUri] = useState<string | null>(cached ?? null)
@@ -91,13 +94,14 @@ const MediaThumbnailBase: React.FC<Props> = ({ file, fileKey, size, onPress, onL
   }, [file.id])
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { width: size, height: size }]}
+    <Pressable
+      onPressIn={() => { Animated.spring(scale, { toValue: 0.93, ...SPRING }).start() }}
+      onPressOut={() => { Animated.spring(scale, { toValue: 1, ...SPRING }).start() }}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={350}
-      activeOpacity={0.8}
     >
+    <Animated.View style={[styles.container, { width: size, height: size }, { transform: [{ scale }] }]}>
       {loading && (
         <View style={styles.placeholder}>
           <ActivityIndicator color={colors.accent} size="small" />
@@ -138,7 +142,8 @@ const MediaThumbnailBase: React.FC<Props> = ({ file, fileKey, size, onPress, onL
           {selected && <Ionicons name="checkmark" size={13} color="#fff" />}
         </View>
       )}
-    </TouchableOpacity>
+    </Animated.View>
+    </Pressable>
   )
 }
 
