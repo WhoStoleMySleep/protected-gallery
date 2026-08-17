@@ -173,7 +173,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLock, onResetComplete, onCha
     try {
       await clearAllMeta()
       await clearVault()
-      await clearDecryptedCache()
+      clearDecryptedCache()
       await deletePin()
       await deleteMasterKey()
       onResetComplete()

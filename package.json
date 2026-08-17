@@ -16,7 +16,6 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "buffer": "^6.0.3",
     "expo": "~56.0.12",
-    "expo-av": "~16.0.8",
     "expo-crypto": "~56.0.4",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.8",
@@ -28,6 +27,7 @@
     "expo-secure-store": "~56.0.4",
     "expo-sensors": "~56.0.6",
     "expo-sharing": "~56.0.18",
+    "expo-sqlite": "~56.0.5",
     "expo-status-bar": "~56.0.4",
     "expo-video": "~56.1.4",
     "react": "19.2.3",
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.17",
+    "babel-preset-expo": "56.0.15",
     "typescript": "~6.0.3"
   },
   "private": true

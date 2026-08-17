@@ -2,7 +2,7 @@ import { File, Directory, Paths } from 'expo-file-system'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { encryptBytes, decryptBytes } from '../crypto/cipher'
 import { getExtension, getMediaKind } from '../utils/media'
-import { getDecryptedUri, setDecryptedUri, removeDecryptedUris } from './decryptedCache'
+import { getDecryptedUri, setDecryptedUri, removeDecryptedUris, clearDecryptedCache, tempFileName } from './decryptedCache'
 import { deleteFileMeta, getFilesByStatus } from './metadata'
 import type { VaultFile } from '../types'
 
@@ -69,17 +69,19 @@ export const decryptToTemp = async (
   fileId?: string,
 ): Promise<string> => {
   if (fileId) {
-    const cached = await getDecryptedUri(fileId)
+    const cached = getDecryptedUri(fileId, mimeType)
     if (cached) return cached
   }
   const encBytes = await new File(encUri).bytes()
   await yield_()
   const decrypted = decryptBytes(encBytes, key)
   await yield_()
-  const ext = getExtension(mimeType)
-  const tempFile = new File(getCacheDir(), `tmp_${fileId ?? Date.now()}.${ext}`)
+  const name = fileId
+    ? tempFileName(fileId, mimeType)
+    : `tmp_${Date.now()}.${getExtension(mimeType)}`
+  const tempFile = new File(getCacheDir(), name)
   tempFile.write(decrypted)
-  if (fileId) await setDecryptedUri(fileId, tempFile.uri)
+  if (fileId) setDecryptedUri(fileId, tempFile.uri)
   return tempFile.uri
 }
 
@@ -89,7 +91,7 @@ export const deleteEncFile = (encUri: string) => {
 }
 
 export const permanentlyDeleteFiles = async (files: VaultFile[]): Promise<void> => {
-  await removeDecryptedUris(files.map(f => f.id))
+  removeDecryptedUris(files.map(f => f.id))
   await Promise.all(files.map(async f => {
     deleteEncFile(f.encryptedPath)
     if (f.thumbPath) deleteEncFile(f.thumbPath)
@@ -130,14 +132,7 @@ export const transferFileToSafe = async (
   return { ...file, encryptedPath: newEnc.uri, thumbPath }
 }
 
-export const clearTempFiles = (): void => {
-  try {
-    for (const item of getCacheDir().list()) {
-      if (item instanceof File && item.name.startsWith('tmp_'))
-        item.delete()
-    }
-  } catch {}
-}
+export const clearTempFiles = (): void => clearDecryptedCache()
 
 export const clearVault = () => {
   const dir = getVaultDir()

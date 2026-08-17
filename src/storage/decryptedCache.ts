@@ -1,46 +1,82 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { File } from 'expo-file-system'
+import { File, Directory, Paths } from 'expo-file-system'
+import { getExtension } from '../utils/media'
 
-const STORE_KEY = 'vault:decryptedUris:v1'
+/**
+ * Кэш расшифрованных временных файлов.
+ *
+ * Раньше карта fileId → uri хранилась в AsyncStorage одним JSON-блобом и
+ * перезаписывалась целиком при каждом просмотре. На больших сейфах это
+ * переполняло базу AsyncStorage (SQLITE_FULL) и ломало сам просмотр.
+ *
+ * Имя временного файла детерминировано (`tmp_<cacheKey>.<ext>`), поэтому
+ * персистентное хранилище не нужно: наличие кэша проверяется по файловой
+ * системе, а память используется только как быстрый путь.
+ */
 
-let mem: Record<string, string> | null = null
+const TEMP_PREFIX = 'tmp_'
 
-const load = async (): Promise<Record<string, string>> => {
-  if (mem) return mem
-  const raw = await AsyncStorage.getItem(STORE_KEY)
-  mem = raw ? JSON.parse(raw) : {}
-  return mem!
-}
+const mem = new Map<string, string>()
 
-export const getDecryptedUri = async (fileId: string): Promise<string | null> => {
-  const cache = await load()
-  const uri = cache[fileId]
-  if (!uri) return null
+const getCacheDir = () => new Directory(Paths.cache)
+
+export const tempFileName = (cacheKey: string, mimeType: string): string =>
+  `${TEMP_PREFIX}${cacheKey}.${getExtension(mimeType)}`
+
+export const getDecryptedUri = (cacheKey: string, mimeType: string): string | null => {
+  const cached = mem.get(cacheKey)
+  if (cached) {
+    try {
+      if (new File(cached).exists) return cached
+    } catch {}
+    mem.delete(cacheKey)
+  }
+
   try {
-    if (new File(uri).exists) return uri
+    const file = new File(getCacheDir(), tempFileName(cacheKey, mimeType))
+    if (file.exists) {
+      mem.set(cacheKey, file.uri)
+      return file.uri
+    }
   } catch {}
-  // файл удалён системой — убираем из кэша
-  delete cache[fileId]
-  AsyncStorage.setItem(STORE_KEY, JSON.stringify(cache))
+
   return null
 }
 
-export const setDecryptedUri = async (fileId: string, uri: string): Promise<void> => {
-  const cache = await load()
-  cache[fileId] = uri
-  await AsyncStorage.setItem(STORE_KEY, JSON.stringify(cache))
+export const setDecryptedUri = (cacheKey: string, uri: string): void => {
+  mem.set(cacheKey, uri)
 }
 
-export const removeDecryptedUris = async (fileIds: string[]): Promise<void> => {
-  const cache = await load()
-  fileIds.forEach(id => { delete cache[id]; delete cache[id + '_thumb'] })
-  mem = cache
-  await AsyncStorage.setItem(STORE_KEY, JSON.stringify(cache))
+/**
+ * Удаляет расшифрованные копии. Раньше временные файлы оставались в кэше
+ * после безвозвратного удаления — открытый плейнтекст переживал удаление
+ * самой записи.
+ */
+export const removeDecryptedUris = (fileIds: string[]): void => {
+  const prefixes = fileIds.flatMap(id => [
+    `${TEMP_PREFIX}${id}.`,
+    `${TEMP_PREFIX}${id}_thumb.`,
+  ])
+
+  fileIds.forEach(id => { mem.delete(id); mem.delete(`${id}_thumb`) })
+
+  try {
+    for (const item of getCacheDir().list()) {
+      if (item instanceof File && prefixes.some(p => item.name.startsWith(p))) {
+        try { item.delete() } catch {}
+      }
+    }
+  } catch {}
 }
 
-export const resetDecryptedCacheMem = (): void => { mem = null }
+export const resetDecryptedCacheMem = (): void => { mem.clear() }
 
-export const clearDecryptedCache = async (): Promise<void> => {
-  mem = {}
-  await AsyncStorage.removeItem(STORE_KEY)
+export const clearDecryptedCache = (): void => {
+  mem.clear()
+  try {
+    for (const item of getCacheDir().list()) {
+      if (item instanceof File && item.name.startsWith(TEMP_PREFIX)) {
+        try { item.delete() } catch {}
+      }
+    }
+  } catch {}
 }

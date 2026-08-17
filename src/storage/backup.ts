@@ -6,7 +6,7 @@ import { zip, unzip } from 'react-native-zip-archive'
 import { encryptBytes, decryptBytes, encryptString, decryptString } from '../crypto/cipher'
 import { bytesToBase64, base64ToBytes } from '../utils/encoding'
 import { deriveSubKey } from '../crypto/keys'
-import { getAllFiles, clearAllMeta } from './metadata'
+import { getAllFiles, clearAllMeta, getRawEntries, putRawEntry } from './metadata'
 import { clearVault } from './vault'
 import type { VaultFile } from '../types'
 
@@ -33,12 +33,19 @@ const deriveBackupKey = (password: string, salt: Uint8Array): Promise<Uint8Array
 
 const toPath = (uri: string): string => uri.replace(/^file:\/\//, '')
 
+/**
+ * Метаданные файлов живут в SQLite, а в AsyncStorage остаются только
+ * настройки. В архив кладём и то, и другое — в едином формате ключ → значение,
+ * чтобы старые бэкапы читались тем же кодом восстановления.
+ */
 const collectAsyncData = async (): Promise<Record<string, string>> => {
+  const result: Record<string, string> = await getRawEntries(VAULT_NS)
+
   const allKeys = await AsyncStorage.getAllKeys()
-  const vaultKeys = (allKeys as string[]).filter(k => k.startsWith(`${VAULT_NS}:`))
-  const pairs = await AsyncStorage.multiGet(vaultKeys)
-  const result: Record<string, string> = {}
+  const settingsKeys = (allKeys as string[]).filter(k => k.startsWith(`${VAULT_NS}:settings:`))
+  const pairs = await AsyncStorage.multiGet(settingsKeys)
   for (const [k, v] of pairs) { if (v !== null) result[k] = v }
+
   return result
 }
 
@@ -94,15 +101,22 @@ const fixAndRestoreMetadata = async (
   vaultDir: Directory,
 ): Promise<void> => {
   for (const [k, v] of Object.entries(asyncData)) {
-    if (k.startsWith(`${VAULT_NS}:file:`)) {
-      try {
-        await AsyncStorage.setItem(k, fixFileMeta(v, metaKey, vaultDir))
-      } catch {
-        await AsyncStorage.setItem(k, v)
-      }
-    } else {
-      await AsyncStorage.setItem(k, v)
+    // Старый индекс-массив больше не нужен: состав сейфа задаётся записями.
+    if (k.endsWith(':index:v1')) continue
+
+    if (k.includes(':file:')) {
+      let payload = v
+      try { payload = fixFileMeta(v, metaKey, vaultDir) } catch {}
+      await putRawEntry(k, payload, metaKey)
+      continue
     }
+
+    if (k.includes(':daily:')) {
+      await putRawEntry(k, v, metaKey)
+      continue
+    }
+
+    await AsyncStorage.setItem(k, v)
   }
 }
 

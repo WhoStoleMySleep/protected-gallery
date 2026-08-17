@@ -203,7 +203,7 @@ function AppContent() {
         let masterKey = await loadSafeKey()
         if (!masterKey) masterKey = await generateAndStoreSafeKey()
         const metaKey = await deriveSubKey(masterKey, 'metadata')
-        initMetadataStore(metaKey, 'vault_safe')
+        await initMetadataStore(metaKey, 'vault_safe')
         initVaultNamespace('vault_safe')
         ensureVaultDir()
         setFileKey(masterKey)
@@ -211,11 +211,15 @@ function AppContent() {
         let masterKey = await loadMasterKey()
         if (!masterKey) masterKey = await generateAndStoreMasterKey()
         const metaKey = await deriveSubKey(masterKey, 'metadata')
-        initMetadataStore(metaKey, 'vault')
+        const migration = await initMetadataStore(metaKey, 'vault')
         initVaultNamespace('vault')
         ensureVaultDir()
         setFileKey(masterKey)
-        purgeExpiredTrash().catch(() => {})
+        // purgeExpiredTrash удаляет .enc-файлы безвозвратно. В сессии, где
+        // метаданные только что переехали в новую базу, полагаться на их
+        // разбор ещё нельзя — очистку откладываем до следующего запуска.
+        if (migration.migrated === 0) purgeExpiredTrash().catch(() => {})
+        else console.warn('[migration]', JSON.stringify(migration))
       }
       setVaultMode(mode)
       setScreen({ name: 'daily' })

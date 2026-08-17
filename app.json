@@ -16,7 +16,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Необходим доступ к галерее для импорта медиафайлов в зашифрованный сейф.",
-"NSFaceIDUsageDescription": "Используется для быстрой разблокировки сейфа."
+        "NSFaceIDUsageDescription": "Используется для быстрой разблокировки сейфа."
       }
     },
     "android": {
@@ -31,7 +31,7 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_EXTERNAL_STORAGE",
-"android.permission.USE_BIOMETRIC",
+        "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "android.permission.RECORD_AUDIO"
       ],
@@ -51,7 +51,12 @@
           "photosPermission": "Необходим доступ к галерее для импорта медиафайлов."
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-sqlite",
+      [
+        "./plugins/withAsyncStorageDbSize",
+        { "sizeInMB": 64 }
+      ]
     ],
     "extra": {
       "eas": {
